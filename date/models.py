@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
 # Create your models here.
 
 Preferences: list[tuple[str, str]] = [
@@ -13,6 +14,13 @@ Gender_Options: list[tuple[str, str]] = [
     ('F', 'Female'),
     ('O', 'Other'),
 ]
+
+STATUS = list[tuple[str, str]] = [
+        ("pending", "Pending"),
+        ("accepted", "Accepted"),
+        ("rejected", "Rejected"),
+        ("unmatched", "Unmatched"),
+    ]
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, primary_key = True, on_delete=models.CASCADE)
@@ -39,15 +47,34 @@ class UserProfile(models.Model):
         return f"{self.user.username}'s Profile"
 
 
-class UserConnections(models.Model):
-    user = models.OneToOneField(UserProfile, on_delete=models.CASCADE)
-    matched = models.ManyToManyField(
-        "self",
-        related_name="matched_with",
-        symmetrical=False,
-        blank=True
+class Match(models.Model):
+    matcher = models.ForeignKey(
+        UserProfile,
+        on_delete=models.CASCADE,
+        related_name="matches_received"
     )
+   
+    status = models.CharField(max_length=10, choices=STATUS, default="pending")
+    matched_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["matcher", "matchee"],
+                name="unique_match"
+            )
+        ]
 
     def __str__(self):
         return f"People {self.user.user.username} has matched with"
+
+
+def create_profile(sender, instance, created, **kwargs):
+    if created:
+        user_profile = UserProfile(user=instance)
+        user_profile.save()
+
+post_save.connect(create_profile, sender=User)
+
+
+                  
