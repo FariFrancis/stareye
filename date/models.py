@@ -7,7 +7,6 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.core.exceptions import ValidationError
 from django.dispatch import receiver
-# Create your models here.
 
 Preferences: list[tuple[str, str]] = [
     ('Casual', 'casual'),
@@ -38,6 +37,7 @@ Ethnicity: list[tuple[str, str]] = [
     ('ASIAN', 'Asian'),
     ('BLACK', 'Black'),
     ('MIXED', 'Mixed'),
+    ('HISPANIC', 'Hispanic'),
     ('OTHER ETHNICITY', 'Other Ethnicity')
 ]
 Relationship_History: list[tuple[str, str]] = [
@@ -57,7 +57,8 @@ STATUS: list[tuple[str, str]] = [
         ("pending", "Pending"),
         ("accepted", "Accepted"),
         ("rejected", "Rejected"),
-        ("unmatched", "Unmatched"),
+        # ("unmatched", "Unmatched"),
+        # ("blocked", "Blocked")
     ]
 
 class UserProfile(models.Model):
@@ -65,7 +66,8 @@ class UserProfile(models.Model):
     user_Birth_Date = models.DateField(null=True, blank=True)
     user_Bio = models.TextField(max_length=500, blank = True)
     user_Location = models.CharField(max_length=100, blank=True)
-    
+    occupation = models.CharField(max_length=100, blank=True)
+    height = models.PositiveIntegerField(null=True, blank=True)
 
     preference = models.CharField(max_length=20, choices=Preferences, null=True, blank = True)
     gender = models.CharField(max_length=1, choices=Gender_Options, null=True, blank=True)
@@ -89,16 +91,17 @@ def image_filename(instance, filename):
     return os.path.join('images/', filename)
 
 class ProfileImage(models.Model):
-    
-    APPROVAL = (
-        ('TO BE APPROVED', 'To be approved'),
-        ('APPROVED', 'Approved'),
-        ('NOT APPROVED', 'Not approved')
-    )
+
+    # Optional and not needed for demo purposes
+    # APPROVAL = (
+    #     ('TO BE APPROVED', 'To be approved'),
+    #     ('APPROVED', 'Approved'),
+    #     ('NOT APPROVED', 'Not approved')
+    # )
     
     user = models.ForeignKey(UserProfile, default=None, on_delete=models.CASCADE, related_name="images")
     image = models.ImageField(upload_to=image_filename, blank=True)
-    is_verified = models.CharField(choices=APPROVAL, default="TO BE APPROVED", blank=False, max_length=14)
+    # is_verified = models.CharField(choices=APPROVAL, default="TO BE APPROVED", blank=False, max_length=14)
 
 
 class Match(models.Model):
@@ -108,9 +111,9 @@ class Match(models.Model):
         related_name="matches_received"
     )
     matchee = models.ForeignKey(
-    UserProfile,
-    on_delete=models.CASCADE,
-    related_name="matches_sent"
+        UserProfile,
+        on_delete=models.CASCADE,
+        related_name="matches_sent"
     )
 
    
@@ -139,9 +142,32 @@ class Match(models.Model):
     def __str__(self):
         return f"People {self.matcher.user.username} has matched with {self.matchee.user.username}"
 
+# class Block(models.Model):
+#     blocker = models.ForeignKey(
+#         UserProfile,
+#         on_delete=models.CASCADE,
+#         related_name="blocks_made"
+#     )
+#     blocked = models.ForeignKey(
+#         UserProfile,
+#         on_delete=models.CASCADE,
+#         related_name="blocks_received"
+#     )
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     class Meta:
+#         constraints = [
+#             models.UniqueConstraint(
+#                 fields=["blocker", "blocked"],
+#                 name="unique_block"
+#             )
+#         ]
+
+#     def __str__(self):
+#         return f"{self.blocker.user.username} blocked {self.blocked.user.username}"
+
+
 @receiver(post_save, sender=User)
 def create_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
-
-

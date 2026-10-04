@@ -7,11 +7,20 @@ class Message(models.Model):
         on_delete=models.CASCADE,
         related_name="messages"
     )
+    class Meta:
+        indexes = [
+            models.Index(fields=["match", "creation_date"]),
+        ]
     # id = models.IntegerField(max_length=30, primary_key= True)
     # rec_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="rec_user")
     sending_user = models.ForeignKey('date.UserProfile', on_delete=models.CASCADE, related_name="messages_sent")
     message = models.TextField(max_length = 500)
     creation_date = models.DateTimeField("Creation date", auto_now_add=True)
 
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
+        if self.is_deleted:
+            return f"{self.sending_user.user.username}: [deleted]"
         return f"{self.sending_user.user.username}: {self.message[:20]}"

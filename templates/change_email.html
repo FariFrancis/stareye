@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Change Email</title>
+</head>
+<body>
+
+<h1>Change Email</h1>
+
+{% if error %}
+<p style="color:red;">{{ error }}</p>
+{% endif %}
+
+<form method="POST">
+    {% csrf_token %}
+    <label>New Email</label>
+    <input type="email" name="email" value="{{ email }}">
+    <button type="submit">Update Email</button>
+</form>
+
+</body>
+</html>

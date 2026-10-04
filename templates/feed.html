@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Feed</title>
+</head>
+<body>
+
+    <h1>Your Feed</h1>
+
+    <p>These are the other users you can match with:</p>
+
+    <ul>
+        {% for profile in profiles %}
+            <li>
+                <strong>{{ profile.user.username }}</strong><br>
+                Age: {{ profile.age }}<br>
+                Occupation: {{profile.occupation}} <br>
+                Height: {{profile.height}} <br>
+                Location: {{ profile.user_Location }}<br>
+
+                <!-- Link to profile detail -->
+                <a href="/profile/{{ profile.user.id }}/">View Profile</a>
+
+                <!-- Button to create match -->
+                <form action="/match/{{ profile.user.id }}/" method="POST" style="margin-top: 10px;">
+                    {% csrf_token %}
+                    <button type="submit">Match</button>
+                </form>
+            </li>
+
+            <hr>
+        {% endfor %}
+    </ul>
+
+</body>
+</html>

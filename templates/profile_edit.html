@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+    <html>
+        <form method="POST" action="">
+            {% csrf_token %}
+            <label>Birth Date</label>
+            <input type="date" name="user_Birth_Date" value="{{ profile.user_Birth_Date }}">
+
+            <label>Description</label>
+            <textarea name="user_Bio">{{ profile.user_Bio }}</textarea>
+
+            <label>Location</label>
+            <input type="text" name="user_Location" value="{{ profile.user_Location }}">
+
+            <label>Gender</label>
+            <select name="gender">
+                <option value="M" {% if profile.gender == "M" %}selected{% endif %}>Male</option>
+                <option value="F" {% if profile.gender == "F" %}selected{% endif %}>Female</option>
+                <option value="O" {% if profile.gender == "O" %}selected{% endif %}>Other</option>
+            </select>
+
+            <label>Occupation</label>
+            <input type="text" name="occupation" value="{{ profile.occupation }}">
+
+            <label>Height (inches)</label>
+            <input type="number" name="height" value="{{ profile.height }}">
+
+            <label>Preference</label>
+            <select name="preference">
+                <option value="Casual" {% if profile.preference == "Casual" %}selected{% endif %}>Casual</option>
+                <option value="Serious" {% if profile.preference == "Serious" %}selected{% endif %}>Serious</option>
+                <option value="Marriage" {% if profile.preference == "Marriage" %}selected{% endif %}>Marriage</option>
+            </select>
+
+            <label>Hair</label>
+            <select name="hair">
+                <option value="BLACK" {% if profile.hair == "BLACK" %}selected{% endif %}>Black</option>
+                <option value="BLONDE" {% if profile.hair == "BLONDE" %}selected{% endif %}>Blonde</option>
+                <option value="BROWN" {% if profile.hair == "BROWN" %}selected{% endif %}>Brown</option>
+                <option value="RED" {% if profile.hair == "RED" %}selected{% endif %}>Red</option>
+                <option value="GREY" {% if profile.hair == "GREY" %}selected{% endif %}>Grey</option>
+                <option value="BALD" {% if profile.hair == "BALD" %}selected{% endif %}>Bald</option>
+                <option value="BLUE" {% if profile.hair == "BLUE" %}selected{% endif %}>Blue</option>
+                <option value="PINK" {% if profile.hair == "PINK" %}selected{% endif %}>Pink</option>
+                <option value="GREEN" {% if profile.hair == "GREEN" %}selected{% endif %}>Green</option>
+                <option value="PURPLE" {% if profile.hair == "PURPLE" %}selected{% endif %}>Purple</option>
+                <option value="OTHER" {% if profile.hair == "OTHER" %}selected{% endif %}>Other</option>
+            </select>
+
+            <label>Ethnicity</label>
+            <select name="ethnic">
+                <option value="WHITE" {% if profile.ethnic == "WHITE" %}selected{% endif %}>White</option>
+                <option value="BLACK" {% if profile.ethnic == "BLACK" %}selected{% endif %}>Black</option>
+                <option value="ASIAN" {% if profile.ethnic == "ASIAN" %}selected{% endif %}>Asian</option>
+                <option value="MIXED" {% if profile.ethnic == "MIXED" %}selected{% endif %}>Mixed</option>
+                <option value="HISPANIC" {% if profile.ethnic == "HISPANIC" %}selected{% endif %}>Hispanic</option>
+                <option value="OTHER ETHNICITY" {% if profile.ethnic == "OTHER ETHNICITY" %}selected{% endif %}>Other</option>
+            </select>
+
+            <label>Relationship History</label>
+            <select name="rel_History">
+                <option value="NEVER MARRIED" {% if profile.rel_History == "NEVER MARRIED" %}selected{% endif %}>Never Married</option>
+                <option value="DIVORCED" {% if profile.rel_History == "DIVORCED" %}selected{% endif %}>Divorced</option>
+                <option value="WIDOWED" {% if profile.rel_History == "WIDOWED" %}selected{% endif %}>Widowed</option>
+                <option value="SEPARATED" {% if profile.rel_History == "SEPARATED" %}selected{% endif %}>Separated</option>
+            </select>
+
+            <label>Education</label>
+            <select name="education">
+                <option value="HIGH SCHOOL" {% if profile.education == "HIGH SCHOOL" %}selected{% endif %}>High School</option>
+                <option value="COLLEGE" {% if profile.education == "COLLEGE" %}selected{% endif %}>College</option>
+                <option value="BACHELORS DEGREE" {% if profile.education == "BACHELORS DEGREE" %}selected{% endif %}>Bachelors</option>
+                <option value="MASTERS" {% if profile.education == "MASTERS" %}selected{% endif %}>Masters</option>
+                <option value="PHD / POST DOCTORAL" {% if profile.education == "PHD / POST DOCTORAL" %}selected{% endif %}>PhD</option>
+            </select>
+            <button type="submit">Save Changes</button>
+        </form>
+    </html>
