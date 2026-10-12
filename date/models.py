@@ -8,100 +8,127 @@ from django.db.models.signals import post_save
 from django.core.exceptions import ValidationError
 from django.dispatch import receiver
 
-Preferences: list[tuple[str, str]] = [
-    ('Casual', 'casual'),
-    ('Serious', 'serious'),
-    ('Marriage', 'marriage'),
+preferences = [
+    ('casual', 'Casual'),
+    ('serious', 'Serious'),
+    ('marriage', 'Marriage'),
 ]
 
-Gender_Options: list[tuple[str, str]] = [
-    ('M', 'Male'),
-    ('F', 'Female'),
-    ('O', 'Other'),
+gender_options = [
+    ('m', 'Male'),
+    ('f', 'Female'),
+    ('o', 'Other'),
 ]
-Hair_Color: list[tuple[str, str]] = [
-    ('BLACK', 'Black'),
-    ('BLONDE', 'Blonde'),
-    ('BROWN', 'Brown'),
-    ('RED', 'Red'),
-    ('GREY', 'Grey'),
-    ('BALD', 'Bald'),
-    ('BLUE', 'Blue'),
-    ('PINK', 'Pink'),
-    ('GREEN', 'Green'),
-    ('PURPLE', 'Purple'),
-    ('OTHER', 'Other'),
+
+hair_color_options = [
+    ('black', 'Black'),
+    ('blonde', 'Blonde'),
+    ('brown', 'Brown'),
+    ('red', 'Red'),
+    ('grey', 'Grey'),
+    ('bald', 'Bald'),
+    ('blue', 'Blue'),
+    ('pink', 'Pink'),
+    ('green', 'Green'),
+    ('purple', 'Purple'),
+    ('other', 'Other'),
 ]
-Ethnicity: list[tuple[str, str]] = [
-    ('WHITE', 'White'),
-    ('ASIAN', 'Asian'),
-    ('BLACK', 'Black'),
-    ('MIXED', 'Mixed'),
-    ('HISPANIC', 'Hispanic'),
-    ('OTHER ETHNICITY', 'Other Ethnicity')
+
+ethnicity_options = [
+    ('white', 'White'),
+    ('asian', 'Asian'),
+    ('black', 'Black'),
+    ('mixed', 'Mixed'),
+    ('hispanic', 'Hispanic'),
+    ('other_ethnicity', 'Other Ethnicity'),
 ]
-Relationship_History: list[tuple[str, str]] = [
-    ('NEVER MARRIED', 'Never Married'),
-    ('DIVORCED', 'Divorced'),
-    ('WIDOWED', 'Widowed'),
-    ('SEPARATED', 'Separated')
+
+religion_options = [
+    ('christian', 'Christian'),
+    ('muslim', 'Muslim'),
+    ('hindu', 'Hindu'),
+    ('jewish', 'Jewish'),
+    ('buddhist', 'Buddhist'),
+    ('atheist', 'Atheist'),
+    ('agnostic', 'Agnostic'),
+    ('spiritual', 'Spiritual'),
 ]
-Education: list[tuple[str, str]] = [
-    ('HIGH SCHOOL', 'High School'),
-    ('COLLEGE', 'College'),
-    ('BACHELORS DEGREE', 'Bachelors Degree'),
-    ('MASTERS', 'Masters'),
-    ('PHD / POST DOCTORAL', 'PhD / Post Doctoral'),
+
+relationship_history_options = [
+    ('never_married', 'Never Married'),
+    ('divorced', 'Divorced'),
+    ('widowed', 'Widowed'),
+    ('separated', 'Separated'),
 ]
-STATUS: list[tuple[str, str]] = [
-        ("pending", "Pending"),
-        ("accepted", "Accepted"),
-        ("rejected", "Rejected"),
-        # ("unmatched", "Unmatched"),
-        # ("blocked", "Blocked")
-    ]
+
+education_options = [
+    ('high_school', 'High School'),
+    ('college', 'College'),
+    ('bachelors', 'Bachelors Degree'),
+    ('masters', 'Masters'),
+    ('phd', 'PhD / Post Doctoral'),
+]
+
+match_status_options = [
+    ("pending", "Pending"),
+    ("accepted", "Accepted"),
+    ("rejected", "Rejected"),
+]
+
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, primary_key = True, on_delete=models.CASCADE)
-    user_Birth_Date = models.DateField(null=True, blank=True)
-    user_Bio = models.TextField(max_length=500, blank = True)
-    user_Location = models.CharField(max_length=100, blank=True)
-    occupation = models.CharField(max_length=100, blank=True)
-    height = models.PositiveIntegerField(null=True, blank=True)
+    user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE)
 
-    preference = models.CharField(max_length=20, choices=Preferences, null=True, blank = True)
-    gender = models.CharField(max_length=1, choices=Gender_Options, null=True, blank=True)
-    hair = models.CharField(max_length=30, choices=Hair_Color, null=True, blank=True)
-    ethnic = models.CharField(max_length=20, choices=Ethnicity, null=True, blank=True)
-    rel_History = models.CharField(max_length=30, choices=Relationship_History, null=True, blank=True)
-    education = models.CharField(max_length=30, choices=Education, null=True, blank=True)
-    creation_date = models.DateTimeField(auto_now_add=True)
-    update_time = models.DateTimeField(auto_now=True)
+    user_birth_date = models.DateField(null=True, blank=True)
+    user_bio = models.TextField(max_length=500, blank=True)
+    user_location = models.CharField(max_length=100, blank=True)
+    occupation = models.CharField(max_length=100, blank=True)
+
+    religion = models.CharField(max_length=50, choices=religion_options, blank=True)
+    religion_preference = models.CharField(max_length=20, default='neutral')
+
+    height_cm = models.PositiveIntegerField(null=True, blank=True)
+
+    preference = models.CharField(max_length=20, choices=preferences, null=True, blank=True)
+    gender = models.CharField(max_length=1, choices=gender_options, null=True, blank=True)
+    gender_preference = models.CharField(max_length=20, default='everyone')
+
+    hair_color = models.CharField(max_length=30, choices=hair_color_options, null=True, blank=True)
+    ethnicity = models.CharField(max_length=20, choices=ethnicity_options, null=True, blank=True)
+    relationship_history = models.CharField(max_length=30, choices=relationship_history_options, null=True, blank=True)
+    education = models.CharField(max_length=30, choices=education_options, null=True, blank=True)
+
+    hobbies = models.JSONField(default=list, blank=True)
+
+    # Embeddings for recommendation system
+    hobbies_vec = models.JSONField(null=True, blank=True)
+    religion_vec = models.JSONField(null=True, blank=True)
+    education_vec = models.JSONField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def age(self):
-        if not self.user_Birth_Date:
+        if not self.user_birth_date:
             return None
-        return int((datetime.date.today() - self.user_Birth_Date).days / 365.25 )
+        return int((datetime.date.today() - self.user_birth_date).days / 365.25)
+
     def __str__(self):
         return f"{self.user.username}'s Profile"
 
+
 def image_filename(instance, filename):
     ext = filename.split('.')[-1]
-    filename = "%s.%s" % (uuid.uuid4(), ext)
+    filename = f"{uuid.uuid4()}.{ext}"
     return os.path.join('images/', filename)
 
-class ProfileImage(models.Model):
 
-    # Optional and not needed for demo purposes
-    # APPROVAL = (
-    #     ('TO BE APPROVED', 'To be approved'),
-    #     ('APPROVED', 'Approved'),
-    #     ('NOT APPROVED', 'Not approved')
-    # )
-    
-    user = models.ForeignKey(UserProfile, default=None, on_delete=models.CASCADE, related_name="images")
+class ProfileImage(models.Model):
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="images")
     image = models.ImageField(upload_to=image_filename, blank=True)
-    # is_verified = models.CharField(choices=APPROVAL, default="TO BE APPROVED", blank=False, max_length=14)
+
+    def __str__(self):
+        return f"Image for {self.user.user.username}"
 
 
 class Match(models.Model):
@@ -116,8 +143,7 @@ class Match(models.Model):
         related_name="matches_sent"
     )
 
-   
-    status = models.CharField(max_length=10, choices=STATUS, default="pending")
+    status = models.CharField(max_length=10, choices=match_status_options, default="pending")
     matched_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -127,6 +153,7 @@ class Match(models.Model):
                 name="unique_match"
             )
         ]
+
     def clean(self):
         if self.matcher == self.matchee:
             raise ValidationError("Users cannot match themselves")
@@ -138,9 +165,8 @@ class Match(models.Model):
         self.clean()
         super().save(*args, **kwargs)
 
-
     def __str__(self):
-        return f"People {self.matcher.user.username} has matched with {self.matchee.user.username}"
+        return f"{self.matcher.user.username} matched with {self.matchee.user.username}"
 
 # class Block(models.Model):
 #     blocker = models.ForeignKey(
