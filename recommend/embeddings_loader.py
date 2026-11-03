@@ -1,30 +1,49 @@
-import zipfile
-import pandas as pd
-from sentence_transformers import SentenceTransformer
+"""Lazy sentence-transformer embeddings.
+
+Nothing heavy happens at import time: the model and the category tables are
+built on first use, and CSV paths are anchored to the project root instead of
+the current working directory.
+"""
+import csv
+from functools import lru_cache
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODEL_NAME = "all-MiniLM-L6-v2"
+
+CATEGORY_FILES = {
+    "religion": BASE_DIR / "religion.csv",
+    "education": BASE_DIR / "education.csv",
+}
 
 
-model = SentenceTransformer('all-MiniLM-L6-v2')
+@lru_cache(maxsize=1)
+def get_model():
+    from sentence_transformers import SentenceTransformer
 
-# Loads the zip file into a readable csv 
-with zipfile.ZipFile('hobbies.zip') as z:
-    with z.open('hobbies.csv') as f:
-        hobbies_df = pd.read_csv(f, on_bad_lines='skip')
+    return SentenceTransformer(MODEL_NAME)
 
-# Drops all duplicate hobbies and sets them all lowercase
-hobbies_df = hobbies_df.drop_duplicates(subset='HOBBIES').reset_index(drop=True)
-hobbies_df['HOBBIES'] = hobbies_df['HOBBIES'].astype(str).str.lower()
 
-# Loads education and religion csvs
-education_df = pd.read_csv("education.csv")
-religion_df = pd.read_csv("religion.csv")
+def _read_labels(path, column):
+    with open(path, newline="", encoding="utf-8") as handle:
+        return [row[column].strip() for row in csv.DictReader(handle) if row.get(column)]
 
-# Used for embedding columns 
-def embed_column(df, column):
+
+@lru_cache(maxsize=None)
+def _category_table(kind):
+    model = get_model()
     return {
-        row[column]: model.encode(row[column]).tolist()
-        for _, row in df.iterrows()
+        label: model.encode(label.replace("_", " ")).tolist()
+        for label in _read_labels(CATEGORY_FILES[kind], kind)
     }
 
-# Create embedding dictionaries
-relig_emb = embed_column(religion_df, "religion")
-edu_emb = embed_column(education_df, "education")
+
+def embed_hobbies(hobbies):
+    return get_model().encode(" ".join(hobbies)).tolist()
+
+
+def category_vector(kind, label):
+    """Embedding for a known religion/education label, else None."""
+    if not label:
+        return None
+    return _category_table(kind).get(label)
