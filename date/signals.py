@@ -1,22 +1,43 @@
+import logging
+
+from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from date.models import UserProfile
-from recommend.embedding_loader import model, relig_emb, edu_emb
 
-@receiver(post_save, sender=UserProfile)
-def generate_embeddings(sender, instance, **kwargs):
-    from recommend.embedding_loader import model, relig_emb, edu_emb
+from .models import UserProfile
 
-    # Hobbies embedding
-    if instance.hobbies:
-        instance.hobbies_vec = model.encode(" ".join(instance.hobbies)).tolist()
+logger = logging.getLogger(__name__)
 
-    # Religion embedding
-    if instance.religion:
-        instance.religion_vec = relig_emb.get(instance.religion)
+EMBEDDING_SOURCE_FIELDS = {"hobbies", "religion", "education"}
 
-    # Education embedding
-    if instance.education:
-        instance.education_vec = edu_emb.get(instance.education)
 
-    instance.save()
+@receiver(post_save, sender=User, dispatch_uid="date_create_profile")
+def create_profile(sender, instance, created, raw=False, **kwargs):
+    if created and not raw:
+        UserProfile.objects.get_or_create(user=instance)
+
+
+@receiver(post_save, sender=UserProfile, dispatch_uid="date_generate_embeddings")
+def generate_embeddings(sender, instance, created, raw=False, update_fields=None, **kwargs):
+    """Refresh the recommender vectors whenever a profile is saved.
+
+    Uses QuerySet.update() to store the vectors, which does not fire post_save
+    again (the old version called instance.save() here and would recurse
+    forever). Failures are logged and never block saving the profile.
+    """
+    if raw:
+        return
+    if update_fields and not EMBEDDING_SOURCE_FIELDS & set(update_fields):
+        return
+
+    try:
+        from recommend.services import compute_embeddings
+
+        vectors = compute_embeddings(instance)
+    except Exception:
+        logger.exception("Embedding generation failed for profile %s", instance.pk)
+        return
+
+    if not vectors or (created and not any(vectors.values())):
+        return
+    UserProfile.objects.filter(pk=instance.pk).update(**vectors)

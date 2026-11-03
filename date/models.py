@@ -1,12 +1,11 @@
-import datetime
-import math
-import uuid
 import os
-from django.db import models
+import uuid
+
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
 from django.core.exceptions import ValidationError
-from django.dispatch import receiver
+from django.db import models
+
+from .utils import calculate_age
 
 preferences = [
     ('casual', 'Casual'),
@@ -18,6 +17,20 @@ gender_options = [
     ('m', 'Male'),
     ('f', 'Female'),
     ('o', 'Other'),
+]
+
+# Keys must match recommend.rec.GENDER_PREF.
+gender_preference_options = [
+    ('everyone', 'Everyone'),
+    ('male_only', 'Men only'),
+    ('female_only', 'Women only'),
+    ('non_binary_only', 'Non-binary only'),
+    ('male_female', 'Men and women'),
+]
+
+religion_preference_options = [
+    ('neutral', 'No preference'),
+    ('dealbreaker', 'Must share my religion'),
 ]
 
 hair_color_options = [
@@ -61,6 +74,7 @@ relationship_history_options = [
     ('separated', 'Separated'),
 ]
 
+# Keys must match education.csv (used for the education embeddings).
 education_options = [
     ('high_school', 'High School'),
     ('college', 'College'),
@@ -85,22 +99,28 @@ class UserProfile(models.Model):
     occupation = models.CharField(max_length=100, blank=True)
 
     religion = models.CharField(max_length=50, choices=religion_options, blank=True)
-    religion_preference = models.CharField(max_length=20, default='neutral')
+    religion_preference = models.CharField(
+        max_length=20, choices=religion_preference_options, default='neutral'
+    )
 
     height_cm = models.PositiveIntegerField(null=True, blank=True)
 
     preference = models.CharField(max_length=20, choices=preferences, null=True, blank=True)
     gender = models.CharField(max_length=1, choices=gender_options, null=True, blank=True)
-    gender_preference = models.CharField(max_length=20, default='everyone')
+    gender_preference = models.CharField(
+        max_length=20, choices=gender_preference_options, default='everyone'
+    )
 
     hair_color = models.CharField(max_length=30, choices=hair_color_options, null=True, blank=True)
     ethnicity = models.CharField(max_length=20, choices=ethnicity_options, null=True, blank=True)
-    relationship_history = models.CharField(max_length=30, choices=relationship_history_options, null=True, blank=True)
+    relationship_history = models.CharField(
+        max_length=30, choices=relationship_history_options, null=True, blank=True
+    )
     education = models.CharField(max_length=30, choices=education_options, null=True, blank=True)
 
     hobbies = models.JSONField(default=list, blank=True)
 
-    # Embeddings for recommendation system
+    # Embeddings for the recommendation system (generated in date/signals.py).
     hobbies_vec = models.JSONField(null=True, blank=True)
     religion_vec = models.JSONField(null=True, blank=True)
     education_vec = models.JSONField(null=True, blank=True)
@@ -109,18 +129,19 @@ class UserProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def age(self):
-        if not self.user_birth_date:
-            return None
-        return int((datetime.date.today() - self.user_birth_date).days / 365.25)
+        return calculate_age(self.user_birth_date)
+
+    def is_complete(self):
+        """Minimum info needed to appear in (and use) the feed."""
+        return bool(self.user_birth_date and self.gender)
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
 
 
 def image_filename(instance, filename):
-    ext = filename.split('.')[-1]
-    filename = f"{uuid.uuid4()}.{ext}"
-    return os.path.join('images/', filename)
+    ext = os.path.splitext(filename)[1].lower()
+    return os.path.join('images', f"{uuid.uuid4()}{ext}")
 
 
 class ProfileImage(models.Model):
@@ -132,15 +153,21 @@ class ProfileImage(models.Model):
 
 
 class Match(models.Model):
+    """A match request. `matcher` asks, `matchee` accepts or rejects."""
+
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
     matcher = models.ForeignKey(
         UserProfile,
         on_delete=models.CASCADE,
-        related_name="matches_received"
+        related_name="matches_sent",
     )
     matchee = models.ForeignKey(
         UserProfile,
         on_delete=models.CASCADE,
-        related_name="matches_sent"
+        related_name="matches_received",
     )
 
     status = models.CharField(max_length=10, choices=match_status_options, default="pending")
@@ -155,10 +182,12 @@ class Match(models.Model):
         ]
 
     def clean(self):
-        if self.matcher == self.matchee:
+        if self.matcher_id == self.matchee_id:
             raise ValidationError("Users cannot match themselves")
 
-        if Match.objects.filter(matcher=self.matchee, matchee=self.matcher).exists():
+        if self._state.adding and Match.objects.filter(
+            matcher=self.matchee, matchee=self.matcher
+        ).exists():
             raise ValidationError("This match already exists in reverse.")
 
     def save(self, *args, **kwargs):
@@ -166,34 +195,33 @@ class Match(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.matcher.user.username} matched with {self.matchee.user.username}"
-
-# class Block(models.Model):
-#     blocker = models.ForeignKey(
-#         UserProfile,
-#         on_delete=models.CASCADE,
-#         related_name="blocks_made"
-#     )
-#     blocked = models.ForeignKey(
-#         UserProfile,
-#         on_delete=models.CASCADE,
-#         related_name="blocks_received"
-#     )
-#     created_at = models.DateTimeField(auto_now_add=True)
-
-#     class Meta:
-#         constraints = [
-#             models.UniqueConstraint(
-#                 fields=["blocker", "blocked"],
-#                 name="unique_block"
-#             )
-#         ]
-
-#     def __str__(self):
-#         return f"{self.blocker.user.username} blocked {self.blocked.user.username}"
+        return f"{self.matcher.user.username} -> {self.matchee.user.username} ({self.status})"
 
 
-@receiver(post_save, sender=User)
-def create_profile(sender, instance, created, **kwargs):
-    if created:
-        UserProfile.objects.create(user=instance)
+class Block(models.Model):
+    blocker = models.ForeignKey(
+        UserProfile,
+        on_delete=models.CASCADE,
+        related_name="blocks_made"
+    )
+    blocked = models.ForeignKey(
+        UserProfile,
+        on_delete=models.CASCADE,
+        related_name="blocks_received"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["blocker", "blocked"],
+                name="unique_block"
+            )
+        ]
+
+    def clean(self):
+        if self.blocker_id == self.blocked_id:
+            raise ValidationError("Users cannot block themselves")
+
+    def __str__(self):
+        return f"{self.blocker.user.username} blocked {self.blocked.user.username}"
