@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Chat with {{ other.user.username }}{% endblock %}
+{% block content %}
+<h1>Chat with <a href="{% url 'profile-detail' other.user_id %}">{{ other.user.username }}</a></h1>
+<p id="status" class="muted">Connecting&hellip;</p>
+<ul id="log" style="list-style:none; padding:0; max-height:50vh; overflow-y:auto;"></ul>
+<form id="chat-form">
+    <input id="msg" type="text" autocomplete="off" required style="width:70%">
+    <button type="submit">Send</button>
+</form>
+
+{{ chat_config|json_script:"chat-config" }}
+<script>
+(function () {
+    const cfg = JSON.parse(document.getElementById("chat-config").textContent);
+    const log = document.getElementById("log");
+    const status = document.getElementById("status");
+    const form = document.getElementById("chat-form");
+    const input = document.getElementById("msg");
+    input.maxLength = cfg.maxLength;
+
+    // textContent (never innerHTML) so message text can't inject markup.
+    function addMessage(sender, text) {
+        const li = document.createElement("li");
+        const who = document.createElement("strong");
+        who.textContent = sender + ": ";
+        const body = document.createElement("span");
+        body.textContent = text;
+        li.append(who, body);
+        log.appendChild(li);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    fetch(cfg.historyUrl, { credentials: "same-origin" })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (data) { data.messages.forEach(function (m) { addMessage(m.sender, m.message); }); })
+        .catch(function () { status.textContent = "Could not load earlier messages."; });
+
+    const scheme = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(scheme + "://" + location.host + cfg.wsPath);
+    ws.onopen = function () { status.textContent = "Connected."; };
+    ws.onclose = function () { status.textContent = "Disconnected. Reload to reconnect."; };
+    ws.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+        if (data.error) { status.textContent = data.error; return; }
+        addMessage(data.sender, data.message);
+    };
+
+    form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        const text = input.value.trim();
+        if (!text || ws.readyState !== WebSocket.OPEN) { return; }
+        ws.send(JSON.stringify({ message: text }));
+        input.value = "";
+    });
+})();
+</script>
+{% endblock %}
