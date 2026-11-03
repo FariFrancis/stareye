@@ -1,11 +1,11 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Homepage</title>
-    </head>
-    <h1>Stareye</h1>
-    <body>Looking for a change in your romantic life? Try Stareye, we have everything you need</body>
-    <p><a href="/accounts/login">Login</a></p>
-    <p2><a href="/accounts/signup">Sign Up</a></p2> <br> <br>
-</html>
+{% extends "base.html" %}
+{% block title %}Stareye{% endblock %}
+{% block content %}
+<h1>Stareye</h1>
+<p>Looking for a change in your romantic life? Try Stareye, we have everything you need.</p>
+{% if user.is_authenticated %}
+    <p><a href="{% url 'feed' %}">Go to your feed</a></p>
+{% else %}
+    <p><a href="{% url 'login' %}">Log in</a> or <a href="{% url 'signup' %}">sign up</a> (18+ only).</p>
+{% endif %}
+{% endblock %}

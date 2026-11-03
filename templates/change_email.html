@@ -1,22 +1,10 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Change Email</title>
-</head>
-<body>
-
-<h1>Change Email</h1>
-
-{% if error %}
-<p style="color:red;">{{ error }}</p>
-{% endif %}
-
-<form method="POST">
+{% extends "base.html" %}
+{% block title %}Change email{% endblock %}
+{% block content %}
+<h1>Change email</h1>
+<form method="post">
     {% csrf_token %}
-    <label>New Email</label>
-    <input type="email" name="email" value="{{ email }}">
-    <button type="submit">Update Email</button>
+    {{ form.as_p }}
+    <button type="submit">Update email</button>
 </form>
-
-</body>
-</html>
+{% endblock %}

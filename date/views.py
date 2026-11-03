@@ -1,123 +1,179 @@
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, redirect
-from .models import UserProfile, Match
-from .data import profiles
+from django.db.models import Q
+from django.http import Http404, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
+
+from . import services
+from .forms import ProfileForm
+from .models import Match, UserProfile
+
+
+def _wants_json(request):
+    return (
+        "application/json" in request.headers.get("Accept", "")
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    )
+
+
+def _respond(request, ok, message, payload=None, status=200,
+             redirect_to="feed", redirect_args=()):
+    """JSON for API-style callers, flash message + redirect for HTML forms."""
+    if _wants_json(request):
+        body = dict(payload or {}) if ok else {"error": message}
+        return JsonResponse(body, status=status)
+    (messages.success if ok else messages.error)(request, message)
+    return redirect(redirect_to, *redirect_args)
 
 
 def home(request):
     return render(request, "home.html")
 
-def profile_list(request):
-    return render(request, "date/profile_list.html", {"profiles": profiles})
-
-@login_required
-@require_http_methods(["POST"])
-def create_match(request, user_id):
-    matcher = get_object_or_404(UserProfile, user=request.user)
-    matchee = get_object_or_404(UserProfile, user__id=user_id)
-
-    if matcher == matchee:
-        return JsonResponse({"error": "You cannot match yourself"}, status=400)
-
-    if Match.objects.filter(matcher=matcher, matchee=matchee).exists() or \
-       Match.objects.filter(matcher=matchee, matchee=matcher).exists():
-        return JsonResponse({"error": "Match already exists"}, status=400)
-
-    match = Match.objects.create(
-        matcher=matcher,
-        matchee=matchee,
-        status="pending"
-    )
-
-    return JsonResponse({
-        "status": "match_created",
-        "match_id": match.id
-    }, status=201)
-
-@login_required
-@require_http_methods(["POST"])
-def accept_match(request, match_id):
-    match = get_object_or_404(Match, id=match_id)
-
-    # Only the matchee can accept
-    if match.matchee.user != request.user:
-        return JsonResponse({"error": "You cannot accept this match"}, status=403)
-
-    if match.status != "pending":
-        return JsonResponse({"error": "Match is not pending"}, status=400)
-
-    match.status = "accepted"
-    match.save()
-
-    return JsonResponse({
-        "status": "accepted",
-        "match_id": match.id
-    })
-
-@login_required
-def profile_detail(request, profile_id):
-    profile = get_object_or_404(UserProfile, user__id=profile_id)
-
-    return render(request, "date/profile_detail.html", {
-        "profile": profile
-    })
 
 @login_required
 def feed(request):
-    current_profile = get_object_or_404(UserProfile, user=request.user)
-
-    profiles = UserProfile.objects.exclude(pk=current_profile.pk)
-
+    me = services.get_profile(request.user)
+    complete = me.is_complete()
+    ranked = services.get_recommendations(me) if complete else []
     return render(request, "feed.html", {
-        "profiles": profiles
+        "profile": me,
+        "ranked": ranked,
+        "profile_complete": complete,
     })
+
+
+@login_required
+def matches(request):
+    me = services.get_profile(request.user)
+    hidden = services.blocked_ids(me)
+    rows = (
+        Match.objects.filter(Q(matcher=me) | Q(matchee=me))
+        .select_related("matcher__user", "matchee__user")
+        .order_by("-matched_at")
+    )
+
+    incoming, outgoing, accepted = [], [], []
+    for match in rows:
+        other = match.matchee if match.matcher_id == me.pk else match.matcher
+        if other.pk in hidden:
+            continue
+        entry = {"match": match, "other": other}
+        if match.status == Match.ACCEPTED:
+            accepted.append(entry)
+        elif match.status == Match.PENDING:
+            (incoming if match.matchee_id == me.pk else outgoing).append(entry)
+
+    return render(request, "matches.html", {
+        "incoming": incoming,
+        "outgoing": outgoing,
+        "accepted": accepted,
+    })
+
+
+@login_required
+@require_POST
+def create_match(request, user_id):
+    me = services.get_profile(request.user)
+    target = get_object_or_404(UserProfile, user__id=user_id)
+    try:
+        match, mutual = services.request_match(me, target)
+    except services.MatchError as exc:
+        return _respond(request, False, exc.message, status=exc.status)
+
+    if mutual:
+        return _respond(
+            request, True, f"It's a match with {target.user.username}!",
+            {"status": "accepted", "match_id": match.id}, redirect_to="matches",
+        )
+    return _respond(
+        request, True, f"Request sent to {target.user.username}.",
+        {"status": "match_created", "match_id": match.id}, status=201,
+    )
+
+
+def _respond_to_match(request, match_id, accept):
+    me = services.get_profile(request.user)
+    try:
+        match = services.respond_to_match(me, match_id, accept)
+    except services.MatchError as exc:
+        return _respond(request, False, exc.message, status=exc.status,
+                        redirect_to="matches")
+    state = "accepted" if accept else "rejected"
+    return _respond(request, True, f"Request {state}.",
+                    {"status": state, "match_id": match.id}, redirect_to="matches")
+
+
+@login_required
+@require_POST
+def accept_match(request, match_id):
+    return _respond_to_match(request, match_id, accept=True)
+
+
+@login_required
+@require_POST
+def reject_match(request, match_id):
+    return _respond_to_match(request, match_id, accept=False)
+
+
+@login_required
+@require_POST
+def block_user(request, user_id):
+    me = services.get_profile(request.user)
+    target = get_object_or_404(UserProfile, user__id=user_id)
+    try:
+        services.block_user(me, target)
+    except services.MatchError as exc:
+        return _respond(request, False, exc.message, status=exc.status)
+    return _respond(request, True, f"You blocked {target.user.username}.",
+                    {"status": "blocked", "user": target.user.username})
+
+
+@login_required
+@require_POST
+def unblock_user(request, user_id):
+    me = services.get_profile(request.user)
+    target = get_object_or_404(UserProfile, user__id=user_id)
+    services.unblock_user(me, target)
+    return _respond(request, True, f"You unblocked {target.user.username}.",
+                    {"status": "unblocked", "user": target.user.username},
+                    redirect_to="profile-detail", redirect_args=(user_id,))
+
+
+@login_required
+def my_profile(request):
+    return redirect("profile-detail", profile_id=request.user.id)
+
+
+@login_required
+def profile_detail(request, profile_id):
+    profile = get_object_or_404(
+        UserProfile.objects.select_related("user").prefetch_related("images"),
+        user__id=profile_id,
+    )
+    me = services.get_profile(request.user)
+    is_me = profile.pk == me.pk
+
+    i_blocked = False
+    if not is_me:
+        i_blocked = services.has_blocked(me, profile)
+        # Hide the profile from anyone who has been blocked by its owner.
+        if services.is_blocked_between(me, profile) and not i_blocked:
+            raise Http404
+
+    return render(request, "profile_detail.html", {
+        "profile": profile,
+        "is_me": is_me,
+        "i_blocked": i_blocked,
+    })
+
 
 @login_required
 def edit_profile(request):
-    profile = get_object_or_404(UserProfile, user=request.user)
-
-    if request.method == "POST":
-        profile.user_birth_date = request.POST.get("birth_date")
-        profile.user_Descrip = request.POST.get("description")
-        profile.user_Location = request.POST.get("location")
-        profile.gender = request.POST.get("gender")
-        profile.preference = request.POST.get("preference")
-        profile.hair = request.POST.get("hair")
-        profile.ethnic = request.POST.get("ethnic")
-        profile.rel_History = request.POST.get("rel_History")
-        profile.education = request.POST.get("education")
-        profile.occupation = request.POST.get("occupation")
-        profile.height = request.POST.get("height")
-        profile.save()
-
-        return redirect(f"/profile/{profile.user.id}/")
-
-    return render(request, "profile_edit.html", {"profile": profile})
-
-# Optional 
-# @login_required
-# @require_http_methods(["POST"])
-# def block_user(request, user_id):
-#     blocker = get_object_or_404(UserProfile, user=request.user)
-#     blocked = get_object_or_404(UserProfile, user__id=user_id)
-
-#     if blocker == blocked:
-#         return JsonResponse({"error": "You cannot block yourself"}, status=400)
-
-#     Block.objects.get_or_create(blocker=blocker, blocked=blocked)
-
-#     return JsonResponse({"status": "blocked", "user": blocked.user.username})
-
-# Optional and used for full production versions
-# @login_required
-# @require_http_methods(["POST"])
-# def unblock_user(request, user_id):
-#     blocker = get_object_or_404(UserProfile, user=request.user)
-#     blocked = get_object_or_404(UserProfile, user__id=user_id)
-
-#     Block.objects.filter(blocker=blocker, blocked=blocked).delete()
-
-#     return JsonResponse({"status": "unblocked", "user": blocked.user.username})
+    profile = services.get_profile(request.user)
+    form = ProfileForm(request.POST or None, instance=profile)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Profile saved.")
+        return redirect("profile-detail", profile_id=request.user.id)
+    return render(request, "profile_edit.html", {"form": form, "profile": profile})

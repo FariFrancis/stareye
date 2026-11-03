@@ -1,24 +1,30 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ profile.user.username }}'s Profile</title>
-</head>
-<body>
-
+{% extends "base.html" %}
+{% block title %}{{ profile.user.username }}'s profile{% endblock %}
+{% block content %}
 <h1>{{ profile.user.username }}</h1>
 
-<p><strong>Age:</strong> {{ profile.age }}</p>
-<p><strong>Location:</strong> {{ profile.user_Location }}</p>
-<p><strong>Gender:</strong> {{ profile.gender }}</p>
-<p><strong>Preference:</strong> {{ profile.preference }}</p>
-<p><strong>Hair:</strong> {{ profile.hair }}</p>
-<p><strong>Ethnicity:</strong> {{ profile.ethnic }}</p>
-<p><strong>Relationship History:</strong> {{ profile.rel_History }}</p>
-<p><strong>Education:</strong> {{ profile.education }}</p>
-<p><strong>Occupation:</strong> {{ profile.occupation }}</p>
-<p><strong>Height:</strong> {{ profile.height }}</p>
+{% for img in profile.images.all %}{% if img.image %}<img class="thumb" src="{{ img.image.url }}" alt="">{% endif %}{% endfor %}
 
-<p><strong>About:</strong><br>{{ profile.user_Bio }}</p>
+{% if profile.age %}<p><strong>Age:</strong> {{ profile.age }}</p>{% endif %}
+{% if profile.user_location %}<p><strong>Location:</strong> {{ profile.user_location }}</p>{% endif %}
+{% if profile.gender %}<p><strong>Gender:</strong> {{ profile.get_gender_display }}</p>{% endif %}
+{% if profile.preference %}<p><strong>Looking for:</strong> {{ profile.get_preference_display }}</p>{% endif %}
+{% if profile.hair_color %}<p><strong>Hair:</strong> {{ profile.get_hair_color_display }}</p>{% endif %}
+{% if profile.ethnicity %}<p><strong>Ethnicity:</strong> {{ profile.get_ethnicity_display }}</p>{% endif %}
+{% if profile.relationship_history %}<p><strong>Relationship history:</strong> {{ profile.get_relationship_history_display }}</p>{% endif %}
+{% if profile.education %}<p><strong>Education:</strong> {{ profile.get_education_display }}</p>{% endif %}
+{% if profile.religion %}<p><strong>Religion:</strong> {{ profile.get_religion_display }}</p>{% endif %}
+{% if profile.occupation %}<p><strong>Occupation:</strong> {{ profile.occupation }}</p>{% endif %}
+{% if profile.height_cm %}<p><strong>Height:</strong> {{ profile.height_cm }} cm</p>{% endif %}
+{% if profile.hobbies %}<p><strong>Hobbies:</strong> {{ profile.hobbies|join:", " }}</p>{% endif %}
+{% if profile.user_bio %}<p><strong>About:</strong><br>{{ profile.user_bio|linebreaksbr }}</p>{% endif %}
 
-</body>
-</html>
+{% if is_me %}
+    <p><a href="{% url 'edit-profile' %}">Edit profile</a> &middot; <a href="{% url 'change-email' %}">Change email</a></p>
+{% elif i_blocked %}
+    <form method="post" action="{% url 'unblock-user' profile.user_id %}">{% csrf_token %}<button type="submit">Unblock {{ profile.user.username }}</button></form>
+{% else %}
+    <form method="post" action="{% url 'create-match' profile.user_id %}" style="display:inline">{% csrf_token %}<button type="submit">Match</button></form>
+    <form method="post" action="{% url 'block-user' profile.user_id %}" style="display:inline" onsubmit="return confirm('Block this user?');">{% csrf_token %}<button type="submit">Block</button></form>
+{% endif %}
+{% endblock %}

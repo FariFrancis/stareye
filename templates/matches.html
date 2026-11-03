@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Matches{% endblock %}
+{% block content %}
+<h1>Matches</h1>
+
+<h2>Requests for you</h2>
+{% for entry in incoming %}
+    <p>
+        <a href="{% url 'profile-detail' entry.other.user_id %}">{{ entry.other.user.username }}</a> wants to match with you.
+        <form method="post" action="{% url 'accept-match' entry.match.id %}" style="display:inline">{% csrf_token %}<button type="submit">Accept</button></form>
+        <form method="post" action="{% url 'reject-match' entry.match.id %}" style="display:inline">{% csrf_token %}<button type="submit">Reject</button></form>
+    </p>
+{% empty %}
+    <p class="muted">No pending requests.</p>
+{% endfor %}
+
+<h2>Your matches</h2>
+{% for entry in accepted %}
+    <p>
+        <a href="{% url 'profile-detail' entry.other.user_id %}">{{ entry.other.user.username }}</a>
+        &mdash; <a href="{% url 'chat-room' entry.match.id %}">Open chat</a>
+    </p>
+{% empty %}
+    <p class="muted">No matches yet.</p>
+{% endfor %}
+
+<h2>Waiting for a reply</h2>
+{% for entry in outgoing %}
+    <p><a href="{% url 'profile-detail' entry.other.user_id %}">{{ entry.other.user.username }}</a></p>
+{% empty %}
+    <p class="muted">Nothing pending.</p>
+{% endfor %}
+{% endblock %}

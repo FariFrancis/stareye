@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Stareye{% endblock %}</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 760px; margin: 0 auto; padding: 1rem; }
+        nav { display: flex; gap: 1rem; align-items: center; padding-bottom: .75rem; border-bottom: 1px solid #ccc; margin-bottom: 1rem; }
+        nav form { display: inline; margin: 0; }
+        nav .spacer { flex: 1; }
+        button.link { background: none; border: 0; color: #06c; cursor: pointer; padding: 0; font: inherit; }
+        .messages { list-style: none; padding: 0; }
+        .messages li { padding: .5rem .75rem; margin-bottom: .5rem; border-radius: 4px; background: #eef; }
+        .messages li.error { background: #fee; }
+        .messages li.success { background: #efe; }
+        ul.cards { list-style: none; padding: 0; }
+        ul.cards li { border: 1px solid #ddd; border-radius: 6px; padding: .75rem; margin-bottom: .75rem; }
+        img.thumb { max-width: 160px; max-height: 160px; display: block; margin-bottom: .5rem; border-radius: 4px; }
+        .errorlist { color: #b00; padding-left: 1rem; }
+        .muted { color: #666; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="{% url 'home' %}"><strong>Stareye</strong></a>
+    {% if user.is_authenticated %}
+        <a href="{% url 'feed' %}">Feed</a>
+        <a href="{% url 'matches' %}">Matches</a>
+        <a href="{% url 'my-profile' %}">My profile</a>
+        <span class="spacer"></span>
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="link">Log out ({{ user.username }})</button>
+        </form>
+    {% else %}
+        <span class="spacer"></span>
+        <a href="{% url 'login' %}">Log in</a>
+        <a href="{% url 'signup' %}">Sign up</a>
+    {% endif %}
+</nav>
+
+{% if messages %}
+<ul class="messages">
+    {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+</ul>
+{% endif %}
+
+{% block content %}{% endblock %}
+</body>
+</html>

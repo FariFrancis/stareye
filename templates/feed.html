@@ -1,36 +1,32 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Feed</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Feed{% endblock %}
+{% block content %}
+<h1>Your feed</h1>
 
-    <h1>Your Feed</h1>
+{% if not profile_complete %}
+    <p>Add your date of birth and gender in <a href="{% url 'edit-profile' %}">your profile</a> to see recommendations.</p>
+{% elif not ranked %}
+    <p>No new people to show right now. Check your <a href="{% url 'matches' %}">matches</a> or come back later.</p>
+{% else %}
+<ul class="cards">
+    {% for item in ranked %}
+    {% with p=item.profile %}
+    <li>
+        {% with img=p.images.all|first %}{% if img and img.image %}<img class="thumb" src="{{ img.image.url }}" alt="">{% endif %}{% endwith %}
+        <strong>{{ p.user.username }}</strong>{% if p.age %}, {{ p.age }}{% endif %}
+        <span class="muted">&middot; {{ item.score }}% compatible</span><br>
+        {% if p.user_location %}{{ p.user_location }}<br>{% endif %}
+        {% if p.occupation %}{{ p.occupation }}<br>{% endif %}
+        {% if p.user_bio %}<span class="muted">{{ p.user_bio|truncatechars:140 }}</span><br>{% endif %}
 
-    <p>These are the other users you can match with:</p>
-
-    <ul>
-        {% for profile in profiles %}
-            <li>
-                <strong>{{ profile.user.username }}</strong><br>
-                Age: {{ profile.age }}<br>
-                Occupation: {{profile.occupation}} <br>
-                Height: {{profile.height}} <br>
-                Location: {{ profile.user_Location }}<br>
-
-                <!-- Link to profile detail -->
-                <a href="/profile/{{ profile.user.id }}/">View Profile</a>
-
-                <!-- Button to create match -->
-                <form action="/match/{{ profile.user.id }}/" method="POST" style="margin-top: 10px;">
-                    {% csrf_token %}
-                    <button type="submit">Match</button>
-                </form>
-            </li>
-
-            <hr>
-        {% endfor %}
-    </ul>
-
-</body>
-</html>
+        <a href="{% url 'profile-detail' p.user_id %}">View profile</a>
+        <form action="{% url 'create-match' p.user_id %}" method="post" style="margin-top: .5rem;">
+            {% csrf_token %}
+            <button type="submit">Match</button>
+        </form>
+    </li>
+    {% endwith %}
+    {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}
