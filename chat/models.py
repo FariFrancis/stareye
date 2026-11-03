@@ -1,6 +1,8 @@
 from django.db import models
-from django.contrib.auth.models import User
-# Create your models here.
+
+MAX_MESSAGE_LENGTH = 500
+
+
 class Message(models.Model):
     match = models.ForeignKey(
         'date.Match',
@@ -11,10 +13,8 @@ class Message(models.Model):
         indexes = [
             models.Index(fields=["match", "creation_date"]),
         ]
-    # id = models.IntegerField(max_length=30, primary_key= True)
-    # rec_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="rec_user")
     sending_user = models.ForeignKey('date.UserProfile', on_delete=models.CASCADE, related_name="messages_sent")
-    message = models.TextField(max_length = 500)
+    message = models.TextField(max_length=MAX_MESSAGE_LENGTH)
     creation_date = models.DateTimeField("Creation date", auto_now_add=True)
 
     is_deleted = models.BooleanField(default=False)

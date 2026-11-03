@@ -1,65 +1,103 @@
-# chat/consumers.py
 import json
+
+from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-from django.contrib.auth.models import AnonymousUser
-from chat.models import Message
-from date.models import Match, UserProfile
+
+from date.services import ChatAccessError, get_chat_match
+
+from .models import MAX_MESSAGE_LENGTH, Message
+
+# Close codes (4000-4999 are application-defined).
+CLOSE_BAD_REQUEST = 4400
+CLOSE_UNAUTHENTICATED = 4401
+CLOSE_FORBIDDEN = 4403
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
+
+    room_group_name = None
+
     async def connect(self):
-        self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
-        self.room_group_name = f"chat_{self.room_id}"
+        user = self.scope.get("user")
+        if user is None or not user.is_authenticated:
+            await self.close(code=CLOSE_UNAUTHENTICATED)
+            return
 
-        await self.channel_layer.group_add(
-            self.room_group_name,
-            self.channel_name
-        )
+        try:
+            match_id = int(self.scope["url_route"]["kwargs"]["room_id"])
+        except (KeyError, TypeError, ValueError):
+            await self.close(code=CLOSE_BAD_REQUEST)
+            return
 
+        if not await self._can_chat(user, match_id):
+            await self.close(code=CLOSE_FORBIDDEN)
+            return
+
+        self.user = user
+        self.match_id = match_id
+        self.room_group_name = f"chat_{match_id}"
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(
-            self.room_group_name,
-            self.channel_name
-        )
+        if self.room_group_name:
+            await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
-    async def receive(self, text_data):
-        data = json.loads(text_data)
-        message_text = data.get("message")
-
-        # Ensure user is authenticated
-        user = self.scope["user"]
-        if isinstance(user, AnonymousUser):
+    async def receive(self, text_data=None, bytes_data=None):
+        try:
+            data = json.loads(text_data or "")
+        except ValueError:
+            await self._send_error("Invalid JSON")
             return
 
-        # Get sender profile
-        sender_profile = UserProfile.objects.get(user=user)
+        text = data.get("message") if isinstance(data, dict) else None
+        if not isinstance(text, str) or not text.strip():
+            await self._send_error("Message content required")
+            return
+        text = text.strip()
+        if len(text) > MAX_MESSAGE_LENGTH:
+            await self._send_error(f"Message must be at most {MAX_MESSAGE_LENGTH} characters")
+            return
 
-        # Get match (room)
-        match = Match.objects.get(id=self.room_id)
+        payload = await self._save_message(text)
+        if payload is None:
+            await self._send_error("Chat not available")
+            await self.close(code=CLOSE_FORBIDDEN)
+            return
 
-        # Save message to DB
-        message_obj = Message.objects.create(
-            match=match,
-            sender=sender_profile,
-            text=message_text
-        )
-
-        # Broadcast message to group
         await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                "type": "chat_message",
-                "message": message_obj.text,
-                "sender": sender_profile.user.username,
-                "timestamp": message_obj.created_at.isoformat()
-            }
+            self.room_group_name, {"type": "chat_message", **payload}
         )
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
+            "id": event["id"],
             "message": event["message"],
             "sender": event["sender"],
-            "timestamp": event["timestamp"]
+            "timestamp": event["timestamp"],
         }))
+
+    async def _send_error(self, message):
+        await self.send(text_data=json.dumps({"error": message}))
+
+    @database_sync_to_async
+    def _can_chat(self, user, match_id):
+        try:
+            get_chat_match(user, match_id)
+        except ChatAccessError:
+            return False
+        return True
+
+    @database_sync_to_async
+    def _save_message(self, text):
+        try:
+            match, me, _other = get_chat_match(self.user, self.match_id)
+        except ChatAccessError:
+            return None
+        message = Message.objects.create(match=match, sending_user=me, message=text)
+        return {
+            "id": message.id,
+            "message": message.message,
+            "sender": me.user.username,
+            "timestamp": message.creation_date.isoformat(),
+        }
