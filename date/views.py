@@ -19,7 +19,7 @@ def _wants_json(request):
 
 def _respond(request, ok, message, payload=None, status=200,
              redirect_to="feed", redirect_args=()):
-    """JSON for API-style callers, flash message + redirect for HTML forms."""
+
     if _wants_json(request):
         body = dict(payload or {}) if ok else {"error": message}
         return JsonResponse(body, status=status)

@@ -1,4 +1,4 @@
-"""Matching, blocking, chat-access and feed logic (kept out of the views)."""
+#Matching, blocking, chat-access and feed logic
 from django.db import transaction
 from django.db.models import Q
 
@@ -26,7 +26,6 @@ def get_profile(user):
 
 
 def blocked_ids(profile):
-    """Profile ids with a block in either direction involving `profile`."""
     pairs = Block.objects.filter(Q(blocker=profile) | Q(blocked=profile)).values_list(
         "blocker_id", "blocked_id"
     )
@@ -60,11 +59,9 @@ def unblock_user(blocker, target):
 
 @transaction.atomic
 def request_match(sender, target):
-    """Send a match request. Returns (match, is_mutual).
+    # Send a match request. Returns (match, is_mutual).
+    # If the person already asked the sender, that request is accepted instead
 
-    If the target already asked the sender, that request is accepted instead
-    (both people want to match).
-    """
     if sender.pk == target.pk:
         raise MatchError("You cannot match yourself")
     if is_blocked_between(sender, target):
@@ -86,7 +83,7 @@ def request_match(sender, target):
 
 @transaction.atomic
 def respond_to_match(profile, match_id, accept):
-    """Accept or reject a pending request addressed to `profile`."""
+    # Accept or reject a pending request addressed
     match = Match.objects.select_for_update().filter(pk=match_id, matchee=profile).first()
     if match is None:
         raise MatchError("Match not found", 404)
@@ -102,12 +99,10 @@ def respond_to_match(profile, match_id, accept):
 
 
 def get_chat_match(user, match_id):
-    """Return (match, my_profile, other_profile) or raise ChatAccessError.
+    # Return (match, my_profile, other_profile) or raise ChatAccessError.
 
-    Chat is only allowed for the two participants of an *accepted* match with
-    no block in either direction. Every chat entry point (REST and WebSocket)
-    must go through this function.
-    """
+    # Chat is only allowed for the two participants of an accepted match with
+    # no block in either direction.
     profile = UserProfile.objects.filter(user=user).first()
     if profile is None:
         raise ChatAccessError("Chat not available")
@@ -129,7 +124,7 @@ def get_chat_match(user, match_id):
 
 
 def get_recommendations(profile, limit=50):
-    """Compatible, not-yet-seen profiles ranked by similarity (best first)."""
+    # Compatible, not-yet-seen profiles ranked by similarity (best first)
     excluded = {profile.pk} | blocked_ids(profile)
     pairs = Match.objects.filter(Q(matcher=profile) | Q(matchee=profile)).values_list(
         "matcher_id", "matchee_id"
