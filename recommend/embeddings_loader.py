@@ -1,9 +1,3 @@
-"""Lazy sentence-transformer embeddings.
-
-Nothing heavy happens at import time: the model and the category tables are
-built on first use, and CSV paths are anchored to the project root instead of
-the current working directory.
-"""
 import csv
 from functools import lru_cache
 from pathlib import Path
@@ -43,7 +37,7 @@ def embed_hobbies(hobbies):
 
 
 def category_vector(kind, label):
-    """Embedding for a known religion/education label, else None."""
+    # Embedding for a known religion/education label, else None.
     if not label:
         return None
     return _category_table(kind).get(label)

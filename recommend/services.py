@@ -4,7 +4,7 @@ from . import embeddings_loader as loader
 
 
 def compute_embeddings(profile):
-    """Vectors for a profile, ready for QuerySet.update(). Empty if disabled."""
+    # Vectors for a profile, ready for QuerySet.update(). Empty if NA
     if not getattr(settings, "ENABLE_EMBEDDINGS", True):
         return {}
 
