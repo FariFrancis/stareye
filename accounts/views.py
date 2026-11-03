@@ -1,65 +1,32 @@
-from django.contrib.auth.models import User
+from django.contrib import messages
+from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
-from django.shortcuts import render, redirect
-from django.http import JsonResponse
+from django.shortcuts import redirect, render
+
+from .forms import ChangeEmailForm, SignupForm
+
 
 def signup(request):
-    if request.method == "POST":
-        username = request.POST.get("username")
-        email = request.POST.get("email")
-        password = request.POST.get("password")
+    if request.user.is_authenticated:
+        return redirect("feed")
 
-        if not username or not password:
-            return JsonResponse({"error": "Username and password required"}, status=400)
-
-        if User.objects.filter(username=username).exists():
-            return JsonResponse({"error": "Username already taken"}, status=400)
-
-        user = User.objects.create_user(username=username, email = email, password=password)
+    form = SignupForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.save()
         auth_login(request, user)
-
-        return JsonResponse({"status": "signup_success"})
-
-    return render(request, "signup.html")
-
-
-def login(request):
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-
-        user = authenticate(request, username=username, password=password)
-
-        if user is None:
-            return JsonResponse({"error": "Invalid credentials"}, status=400)
-
-        auth_login(request, user)
-        return JsonResponse({"status": "login_success"})
-
-    return render(request, "login.html")
+        messages.success(request, "Welcome to Stareye! Finish your profile to get started.")
+        return redirect("edit-profile")
+    return render(request, "signup.html", {"form": form})
 
 
-def logout(request):
-    auth_logout(request)
-    return redirect("login")
-    
 @login_required
 def change_email(request):
-    user = request.user
-
-    if request.method == "POST":
-        new_email = request.POST.get("email")
-
-        if User.objects.filter(email=new_email).exclude(id=user.id).exists():
-            return render(request, "change_email.html", {
-                "error": "Email already in use",
-                "email": user.email
-            })
-
-        user.email = new_email
-        user.save()
-
-        return redirect("/profile/" + str(user.id))
-
-    return render(request, "change_email.html", {"email": user.email})
+    form = ChangeEmailForm(
+        request.POST or None, user=request.user, initial={"email": request.user.email}
+    )
+    if request.method == "POST" and form.is_valid():
+        request.user.email = form.cleaned_data["email"]
+        request.user.save(update_fields=["email"])
+        messages.success(request, "Email updated.")
+        return redirect("profile-detail", profile_id=request.user.id)
+    return render(request, "change_email.html", {"form": form})
