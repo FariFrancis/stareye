@@ -63,12 +63,6 @@ def is_compatible(a, b):
 # Scoring system
 
 def _cosine_scores(query_vec, candidate_vecs, clamp=True):
-    """Cosine similarity of one vector against many.
-
-    Returns (scores, mask), both of length len(candidate_vecs). mask[i] is
-    False when candidate i (or the query) has no usable vector: missing,
-    wrong length, or all zeros. Those scores are 0 and must be ignored.
-    """
     n = len(candidate_vecs)
     scores = torch.zeros(n)
     mask = torch.zeros(n, dtype=torch.bool)
@@ -113,18 +107,12 @@ def _height_scores(my_height, heights):
 
 
 def compare(v1, v2):
-    """Cosine similarity of two vectors, or None if either is unusable."""
     scores, mask = _cosine_scores(v1, [v2], clamp=False)
     return float(scores[0]) if bool(mask[0]) else None
 
 
 @torch.inference_mode()
 def score_candidates(me, candidates):
-    """Similarity in [0, 1] of `me` to every candidate, as a tensor.
-
-    Does NOT apply the hard filters; use rank_candidates() or filter with
-    is_compatible() first.
-    """
     n = len(candidates)
     if n == 0:
         return torch.zeros(0)
@@ -151,11 +139,6 @@ def score_candidates(me, candidates):
 
 @torch.inference_mode()
 def rank_candidates(me, candidates, limit=50):
-    """Compatible candidates, best first, as [(candidate, score), ...].
-
-    Ties keep the input order (stable sort), so callers control tie-breaking
-    by ordering the candidates they pass in.
-    """
     compatible = [c for c in candidates if is_compatible(me, c)]
     if not compatible:
         return []
@@ -175,7 +158,6 @@ def compute_similarity(a, b):
 
 
 def match_score(a, b):
-    """0.0 for incompatible pairs, otherwise a similarity in [0, 1]."""
     if not is_compatible(a, b):
         return 0.0
     return compute_similarity(a, b)

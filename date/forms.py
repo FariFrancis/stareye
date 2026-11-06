@@ -1,6 +1,7 @@
 from django import forms
 
 from .models import UserProfile
+from .photos import process_upload
 from .utils import validate_adult
 
 MAX_HOBBIES = 20
@@ -21,13 +22,13 @@ class ProfileForm(forms.ModelForm):
             "user_birth_date", "gender", "gender_preference", "user_location",
             "user_bio", "occupation", "height_cm", "preference", "education",
             "religion", "religion_preference", "hair_color", "ethnicity",
-            "relationship_history", "hobbies",
+            "relationship_history", "hobbies", "max_distance_km", "show_distance",
         ]
         labels = {
             "user_birth_date": "Date of birth",
             "gender": "I am",
             "gender_preference": "Interested in",
-            "user_location": "Location",
+            "user_location": "City or area (shown on your profile)",
             "user_bio": "About me",
             "height_cm": "Height (cm)",
             "preference": "Looking for",
@@ -35,6 +36,8 @@ class ProfileForm(forms.ModelForm):
             "religion_preference": "Religion preference",
             "hair_color": "Hair colour",
             "relationship_history": "Relationship history",
+            "max_distance_km": "Maximum distance",
+            "show_distance": "Show my approximate distance to other people",
         }
         widgets = {
             "user_birth_date": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
@@ -72,3 +75,11 @@ class ProfileForm(forms.ModelForm):
         if len(hobbies) > MAX_HOBBIES:
             raise forms.ValidationError(f"Please list at most {MAX_HOBBIES} hobbies.")
         return hobbies
+
+
+class PhotoUploadForm(forms.Form):
+    image = forms.ImageField(label="Add a photo")
+
+    def clean_image(self):
+        # Validates, auto-rotates, strips metadata, resizes and re-encodes.
+        return process_upload(self.cleaned_data["image"])

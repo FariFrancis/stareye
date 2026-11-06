@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Your photos{% endblock %}
+{% block content %}
+<h1>Your photos</h1>
+<p class="muted">{{ photos|length }} of {{ limit }} used. Your oldest photo is your main photo.</p>
+
+<ul class="cards">
+    {% for photo in photos %}
+    <li>
+        {% if photo.image %}<img class="thumb" src="{{ photo.image.url }}" alt="Photo {{ forloop.counter }}">{% endif %}
+        <form method="post" action="{% url 'photo-delete' photo.id %}" onsubmit="return confirm('Delete this photo?');">
+            {% csrf_token %}<button type="submit">Delete</button>
+        </form>
+    </li>
+    {% empty %}
+    <li>No photos yet. You need at least one to use the feed.</li>
+    {% endfor %}
+</ul>
+
+{% if photos|length < limit %}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Upload</button>
+</form>
+{% endif %}
+
+<p><a href="{% url 'edit-profile' %}">Back to profile</a> &middot; <a href="{% url 'feed' %}">Feed</a></p>
+{% endblock %}

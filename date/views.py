@@ -5,9 +5,13 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from . import services
-from .forms import ProfileForm
-from .models import Match, UserProfile
+# from recommend import events
+# from recommend.models import Swipe
+
+from . import geo, services
+from .forms import PhotoUploadForm, ProfileForm
+from .models import Match, ProfileImage, UserProfile
+from .photos import MAX_PHOTOS
 
 
 def _wants_json(request):
@@ -30,7 +34,7 @@ def _respond(request, ok, message, payload=None, status=200,
 def home(request):
     return render(request, "home.html")
 
-
+#Feed content
 @login_required
 def feed(request):
     me = services.get_profile(request.user)
@@ -70,7 +74,7 @@ def matches(request):
         "accepted": accepted,
     })
 
-
+#Matching logic
 @login_required
 @require_POST
 def create_match(request, user_id):
@@ -103,7 +107,7 @@ def _respond_to_match(request, match_id, accept):
     return _respond(request, True, f"Request {state}.",
                     {"status": state, "match_id": match.id}, redirect_to="matches")
 
-
+#Accepting and rejecting matches
 @login_required
 @require_POST
 def accept_match(request, match_id):
@@ -115,7 +119,7 @@ def accept_match(request, match_id):
 def reject_match(request, match_id):
     return _respond_to_match(request, match_id, accept=False)
 
-
+#Blocking users
 @login_required
 @require_POST
 def block_user(request, user_id):
@@ -128,7 +132,7 @@ def block_user(request, user_id):
     return _respond(request, True, f"You blocked {target.user.username}.",
                     {"status": "blocked", "user": target.user.username})
 
-
+#Unblocking users
 @login_required
 @require_POST
 def unblock_user(request, user_id):
@@ -139,6 +143,7 @@ def unblock_user(request, user_id):
                     {"status": "unblocked", "user": target.user.username},
                     redirect_to="profile-detail", redirect_args=(user_id,))
 
+#Profile details and specifications
 
 @login_required
 def my_profile(request):
@@ -177,3 +182,55 @@ def edit_profile(request):
         messages.success(request, "Profile saved.")
         return redirect("profile-detail", profile_id=request.user.id)
     return render(request, "profile_edit.html", {"form": form, "profile": profile})
+
+#Photo components
+@login_required
+def photos(request):
+    profile = services.get_profile(request.user)
+    if request.method == "POST":
+        form = PhotoUploadForm(request.POST, request.FILES)
+        if profile.images.count() >= MAX_PHOTOS:
+            messages.error(request, f"You can have at most {MAX_PHOTOS} photos. Delete one to add another.")
+        elif form.is_valid():
+            ProfileImage.objects.create(user=profile, image=form.cleaned_data["image"])
+            messages.success(request, "Photo added.")
+            return redirect("photos")
+    else:
+        form = PhotoUploadForm()
+    return render(request, "photos.html", {
+        "photos": list(profile.images.all()), "form": form, "limit": MAX_PHOTOS,
+    })
+
+
+@login_required
+@require_POST
+def photo_delete(request, photo_id):
+    photo = get_object_or_404(ProfileImage, pk=photo_id, user=services.get_profile(request.user))
+    photo.image.delete(save=False)  # remove the file as well as the row
+    photo.delete()
+    messages.success(request, "Photo deleted.")
+    return redirect("photos")
+
+#Location components
+@login_required
+def location(request):
+    profile = services.get_profile(request.user)
+    if request.method == "POST":
+        try:
+            services.set_location(profile, request.POST.get("latitude"), request.POST.get("longitude"))
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Location updated.")
+        return redirect("location")
+    return render(request, "location.html", {"has_location": profile.latitude is not None})
+
+
+@login_required
+@require_POST
+def clear_location(request):
+    profile = services.get_profile(request.user)
+    profile.latitude = profile.longitude = None
+    profile.save(update_fields=["latitude", "longitude", "updated_at"])
+    messages.success(request, "Your location was removed.")
+    return redirect("location")

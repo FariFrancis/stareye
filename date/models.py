@@ -83,6 +83,16 @@ education_options = [
     ('phd', 'PhD / Post Doctoral'),
 ]
 
+distance_options = [
+    (None, 'Anywhere'),
+    (5, '5 km'),
+    (10, '10 km'),
+    (25, '25 km'),
+    (50, '50 km'),
+    (100, '100 km'),
+    (250, '250 km'),
+]
+
 match_status_options = [
     ("pending", "Pending"),
     ("accepted", "Accepted"),
@@ -117,8 +127,13 @@ class UserProfile(models.Model):
         max_length=30, choices=relationship_history_options, null=True, blank=True
     )
     education = models.CharField(max_length=30, choices=education_options, null=True, blank=True)
-
     hobbies = models.JSONField(default=list, blank=True)
+
+    #Location parameters.
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    max_distance_km = models.PositiveIntegerField(null=True, blank=True, choices=distance_options)
+    show_distance = models.BooleanField(default=True)
 
     # Embeddings for the recommendation system (generated in date/signals.py).
     hobbies_vec = models.JSONField(null=True, blank=True)
@@ -132,7 +147,7 @@ class UserProfile(models.Model):
         return calculate_age(self.user_birth_date)
 
     def is_complete(self):
-        """Minimum info needed to appear in (and use) the feed."""
+        #Minimum info needed to appear in (and use) the feed.
         return bool(self.user_birth_date and self.gender)
 
     def __str__(self):
@@ -148,12 +163,14 @@ class ProfileImage(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="images")
     image = models.ImageField(upload_to=image_filename, blank=True)
 
+    class Meta:
+        ordering = ["id"]
     def __str__(self):
         return f"Image for {self.user.user.username}"
 
 
 class Match(models.Model):
-    """A match request. `matcher` asks, `matchee` accepts or rejects."""
+    #A match request. matcher asks, matchee accepts or rejects.
 
     PENDING = "pending"
     ACCEPTED = "accepted"

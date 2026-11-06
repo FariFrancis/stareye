@@ -25,9 +25,9 @@ class CosineTests(unittest.TestCase):
         self.assertAlmostEqual(rec.cosine_similarity([1, 0], [0, 1]), 0.0)
 
     def test_unusable_vectors_return_none(self):
-        self.assertIsNone(rec.cosine_similarity(None, [1, 2]))
-        self.assertIsNone(rec.cosine_similarity([1, 2], [1]))
-        self.assertIsNone(rec.cosine_similarity([0, 0], [1, 2]))
+        self.assertIsNone(rec.compute_similarity(None, [1, 2]))
+        self.assertIsNone(rec.compute_similarity([1, 2], [1]))
+        self.assertIsNone(rec.compute_similarity([0, 0], [1, 2]))
 
 
 class CompatibilityTests(unittest.TestCase):

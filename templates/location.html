@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Your location{% endblock %}
+{% block content %}
+<h1>Your location</h1>
+<p>
+    We save an approximate location (about 1&nbsp;km) and only show other people a rough distance such as
+    &ldquo;Less than 10 km away&rdquo;, never your position.
+</p>
+<p>{% if has_location %}<strong>Location set.</strong>{% else %}<span class="muted">No location set yet. You need one to use the feed.</span>{% endif %}</p>
+
+<form id="geo-form" method="post" action="{% url 'location' %}">
+    {% csrf_token %}
+    <input type="hidden" name="latitude" id="geo-lat">
+    <input type="hidden" name="longitude" id="geo-lon">
+    <button type="button" id="geo-button">Use my current location</button>
+</form>
+<p id="geo-status" class="muted"></p>
+
+{% if has_location %}
+<form method="post" action="{% url 'clear-location' %}" onsubmit="return confirm('Remove your location? You will not appear in the feed until you set it again.');">
+    {% csrf_token %}<button type="submit">Remove my location</button>
+</form>
+{% endif %}
+
+<p><a href="{% url 'edit-profile' %}">Back to profile</a> &middot; <a href="{% url 'feed' %}">Feed</a></p>
+
+<script>
+document.getElementById("geo-button").addEventListener("click", function () {
+    const status = document.getElementById("geo-status");
+    if (!navigator.geolocation) { status.textContent = "Your browser can't share your location."; return; }
+    navigator.geolocation.getCurrentPosition(function (position) {
+        document.getElementById("geo-lat").value = position.coords.latitude;
+        document.getElementById("geo-lon").value = position.coords.longitude;
+        document.getElementById("geo-form").submit();
+    }, function () {
+        status.textContent = "Couldn't get your location. Allow location access in your browser and try again.";
+    });
+});
+</script>
+{% endblock %}
