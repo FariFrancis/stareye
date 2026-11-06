@@ -19,12 +19,6 @@ def create_profile(sender, instance, created, raw=False, **kwargs):
 
 @receiver(post_save, sender=UserProfile, dispatch_uid="date_generate_embeddings")
 def generate_embeddings(sender, instance, created, raw=False, update_fields=None, **kwargs):
-    """Refresh the recommender vectors whenever a profile is saved.
-
-    Uses QuerySet.update() to store the vectors, which does not fire post_save
-    again (the old version called instance.save() here and would recurse
-    forever). Failures are logged and never block saving the profile.
-    """
     if raw:
         return
     if update_fields and not EMBEDDING_SOURCE_FIELDS & set(update_fields):
