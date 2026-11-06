@@ -7,7 +7,6 @@ MAX_AGE = 120
 
 
 def calculate_age(birth_date, today=None):
-    """Whole years since birth_date (None if unknown). Correct on birthdays."""
     if not birth_date:
         return None
     today = today or datetime.date.today()
@@ -18,7 +17,6 @@ def calculate_age(birth_date, today=None):
 
 
 def validate_adult(birth_date, today=None):
-    """Raise ValidationError unless birth_date is a plausible 18+ date."""
     age = calculate_age(birth_date, today)
     if age is None:
         raise ValidationError("Date of birth is required.")
