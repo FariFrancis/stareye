@@ -2,7 +2,7 @@
 from django.db import transaction
 from django.db.models import Q
 
-from recommend.rec import is_compatible, match_score
+# from recommend.rec import is_compatible, match_score
 
 from .models import Block, Match, UserProfile
 
@@ -125,6 +125,7 @@ def get_chat_match(user, match_id):
 
 def get_recommendations(profile, limit=50):
     # Compatible, not-yet-seen profiles ranked by similarity (best first)
+    from recommend.rec import is_compatible, match_score
     excluded = {profile.pk} | blocked_ids(profile)
     pairs = Match.objects.filter(Q(matcher=profile) | Q(matchee=profile)).values_list(
         "matcher_id", "matchee_id"

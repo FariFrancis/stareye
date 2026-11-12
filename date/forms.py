@@ -39,6 +39,7 @@ class ProfileForm(forms.ModelForm):
         widgets = {
             "user_birth_date": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "user_bio": forms.Textarea(attrs={"rows": 4}),
+
         }
 
     def __init__(self, *args, **kwargs):
@@ -47,6 +48,27 @@ class ProfileForm(forms.ModelForm):
         self.fields["gender"].required = True
         if self.instance and self.instance.pk:
             self.initial["hobbies"] = ", ".join(self.instance.hobbies or [])
+        for field_name, field in self.fields.items():
+
+                if isinstance(field.widget, forms.Textarea):
+                    field.widget.attrs.update({
+                        "class": "textarea w-full"
+                    })
+
+                elif isinstance(field.widget, forms.Select):
+                    field.widget.attrs.update({
+                        "class": "select w-full"
+                    })
+
+                elif isinstance(field.widget, forms.CheckboxInput):
+                    field.widget.attrs.update({
+                        "class": "checkbox"
+                    })
+
+                else:
+                    field.widget.attrs.update({
+                        "class": "input w-full"
+                    })
 
     def clean_user_birth_date(self):
         return validate_adult(self.cleaned_data.get("user_birth_date"))
