@@ -1,0 +1,44 @@
+# --- Secrets & local config (never commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+local_settings.py
+secrets.*
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+env/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Django ---
+db.sqlite3
+db.sqlite3-journal
+*.sqlite3
+media/
+staticfiles/
+*.log
+
+# --- Node / Tailwind ---
+node_modules/
+# NOTE: theme/static/css/dist/styles.css is intentionally NOT ignored so a
+# host without Node can still serve CSS. Ignore it if you build in CI instead.
+
+# --- ML model caches ---
+.cache/
+*.pt
+*.bin
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
