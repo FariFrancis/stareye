@@ -1,11 +1,82 @@
 {% extends "base.html" %}
 {% block title %}Stareye{% endblock %}
+
 {% block content %}
-<h1>Stareye</h1>
-<p>Looking for a change in your romantic life? Try Stareye, we have everything you need.</p>
-{% if user.is_authenticated %}
-    <p><a href="{% url 'feed' %}">Go to your feed</a></p>
-{% else %}
-    <p><a href="{% url 'login' %}">Log in</a> or <a href="{% url 'signup' %}">sign up</a> (18+ only).</p>
-{% endif %}
+
+<div class="hero min-h-[65vh] rounded-3xl bg-base-100 shadow-xl">
+    <div class="hero-content text-center">
+        <div class="max-w-2xl">
+
+            <h1 class="text-5xl md:text-6xl font-bold text-primary">
+                Find Meaningful Connections
+            </h1>
+
+            <p class="py-6 text-lg text-base-content/80">
+                Stareye helps you discover compatible people,
+                build genuine relationships, and connect through
+                authentic conversations.
+            </p>
+
+            {% if user.is_authenticated %}
+                <a href="{% url 'feed' %}"
+                   class="btn btn-primary btn-lg">
+                    Open Your Feed
+                </a>
+            {% else %}
+                <div class="flex flex-wrap justify-center gap-3">
+                    <a href="{% url 'signup' %}"
+                       class="btn btn-primary btn-lg">
+                        Create Account
+                    </a>
+
+                    <a href="{% url 'login' %}"
+                       class="btn btn-outline btn-lg">
+                        Log In
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="grid gap-6 mt-10 md:grid-cols-3">
+
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-primary">
+                Smart Matching
+            </h2>
+            <p>
+                Discover people based on profile compatibility
+                and shared interests.
+            </p>
+        </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-primary">
+                Private Messaging
+            </h2>
+            <p>
+                Chat with your matches and build real
+                connections in a secure environment.
+            </p>
+        </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-primary">
+                Real Profiles
+            </h2>
+            <p>
+                Share your interests, hobbies, goals and
+                photos to help people get to know you.
+            </p>
+        </div>
+    </div>
+
+</div>
+
 {% endblock %}

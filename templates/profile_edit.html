@@ -1,11 +1,61 @@
 {% extends "base.html" %}
-{% block title %}Edit profile{% endblock %}
+
+{% block title %}Edit Profile{% endblock %}
+
 {% block content %}
-<h1>Edit profile</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save changes</button>
-</form>
-<p class="muted">Photos can be added by an admin for now (Admin &rarr; Profiles &rarr; Images).</p>
+<div class="mx-auto max-w-3xl">
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+
+            <h1 class="card-title text-2xl">
+                Edit Profile
+            </h1>
+
+            <p class="text-base-content/70">
+                Your date of birth and gender are needed to see people in your feed.
+            </p>
+
+            <form method="post" class="space-y-4 mt-4">
+                {% csrf_token %}
+
+                {% for field in form %}
+                <div class="fieldset">
+                    <label class="fieldset-legend">
+                        {{ field.label }}
+                    </label>
+
+                    {{ field }}
+
+                    {% if field.help_text %}
+                    <div class="text-xs text-base-content/60">
+                        {{ field.help_text }}
+                    </div>
+                    {% endif %}
+
+                    {% if field.errors %}
+                    <p class="text-error text-sm">
+                        {{ field.errors }}
+                    </p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <div class="flex gap-3 mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        Save Changes
+                    </button>
+
+                    <a href="{% url 'my-profile' %}" class="btn btn-ghost">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+
+            <p class="mt-2 text-sm text-base-content/60">
+                Photos can't be uploaded from this page yet.
+            </p>
+
+        </div>
+    </div>
+</div>
 {% endblock %}

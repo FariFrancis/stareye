@@ -1,12 +1,60 @@
 {% extends "base.html" %}
+
 {% block title %}Log in{% endblock %}
+
 {% block content %}
-<h2>Log in</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <input type="hidden" name="next" value="{{ next }}">
-    <button type="submit">Log in</button>
-</form>
-<p class="muted">No account? <a href="{% url 'signup' %}">Sign up</a></p>
+<div class="flex justify-center py-6">
+    <div class="card w-full max-w-md bg-base-100 shadow-xl">
+        <div class="card-body">
+
+            <h1 class="card-title justify-center text-3xl text-primary">Welcome back</h1>
+            <p class="text-center text-base-content/70">Log in to continue to Stareye.</p>
+
+            {% if form.errors %}
+            <div role="alert" class="alert alert-error">
+                <span>That username and password don't match. Try again.</span>
+            </div>
+            {% endif %}
+
+            <form method="post" class="mt-2">
+                {% csrf_token %}
+
+                <div class="fieldset">
+                    <label for="login-username" class="fieldset-legend">Username</label>
+                    <input
+                        id="login-username"
+                        type="text"
+                        name="username"
+                        value="{{ form.username.value|default_if_none:'' }}"
+                        class="input w-full"
+                        autocomplete="username"
+                        autofocus
+                        required>
+                </div>
+
+                <div class="fieldset">
+                    <label for="login-password" class="fieldset-legend">Password</label>
+                    <input
+                        id="login-password"
+                        type="password"
+                        name="password"
+                        class="input w-full"
+                        autocomplete="current-password"
+                        required>
+                </div>
+
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <button type="submit" class="btn btn-primary mt-4 w-full">Log in</button>
+            </form>
+
+            <div class="divider">or</div>
+
+            <p class="text-center">
+                <a href="{% url 'signup' %}" class="link link-primary">New here? Create an account</a>
+            </p>
+
+        </div>
+    </div>
+</div>
 {% endblock %}

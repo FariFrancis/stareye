@@ -1,33 +1,91 @@
 {% extends "base.html" %}
+
 {% block title %}Matches{% endblock %}
+
 {% block content %}
-<h1>Matches</h1>
+<h1 class="mb-6 text-3xl font-bold">Matches</h1>
 
-<h2>Requests for you</h2>
-{% for entry in incoming %}
-    <p>
-        <a href="{% url 'profile-detail' entry.other.user_id %}">{{ entry.other.user.username }}</a> wants to match with you.
-        <form method="post" action="{% url 'accept-match' entry.match.id %}" style="display:inline">{% csrf_token %}<button type="submit">Accept</button></form>
-        <form method="post" action="{% url 'reject-match' entry.match.id %}" style="display:inline">{% csrf_token %}<button type="submit">Reject</button></form>
-    </p>
-{% empty %}
-    <p class="muted">No pending requests.</p>
-{% endfor %}
+<div class="space-y-10">
 
-<h2>Your matches</h2>
-{% for entry in accepted %}
-    <p>
-        <a href="{% url 'profile-detail' entry.other.user_id %}">{{ entry.other.user.username }}</a>
-        &mdash; <a href="{% url 'chat-room' entry.match.id %}">Open chat</a>
-    </p>
-{% empty %}
-    <p class="muted">No matches yet.</p>
-{% endfor %}
+    <section>
+        <h2 class="mb-3 flex items-center gap-2 text-xl font-semibold">
+            Requests for you
+            <span class="badge badge-primary">{{ incoming|length }}</span>
+        </h2>
+        <ul class="list rounded-box bg-base-100 shadow-md">
+            {% for entry in incoming %}
+            <li class="list-row items-center">
+                <div class="avatar avatar-placeholder">
+                    <div class="w-10 rounded-full bg-neutral text-neutral-content">
+                        <span>{{ entry.other.user.username|first|upper }}</span>
+                    </div>
+                </div>
+                <div class="list-col-grow">
+                    <a href="{% url 'profile-detail' entry.other.user_id %}" class="link link-hover font-semibold">{{ entry.other.user.username }}</a>
+                    <div class="text-sm text-base-content/70">wants to match with you</div>
+                </div>
+                <form method="post" action="{% url 'accept-match' entry.match.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-sm" aria-label="Accept request from {{ entry.other.user.username }}">Accept</button>
+                </form>
+                <form method="post" action="{% url 'reject-match' entry.match.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost btn-sm" aria-label="Reject request from {{ entry.other.user.username }}">Reject</button>
+                </form>
+            </li>
+            {% empty %}
+            <li class="list-row text-base-content/60">No pending requests.</li>
+            {% endfor %}
+        </ul>
+    </section>
 
-<h2>Waiting for a reply</h2>
-{% for entry in outgoing %}
-    <p><a href="{% url 'profile-detail' entry.other.user_id %}">{{ entry.other.user.username }}</a></p>
-{% empty %}
-    <p class="muted">Nothing pending.</p>
-{% endfor %}
+    <section>
+        <h2 class="mb-3 flex items-center gap-2 text-xl font-semibold">
+            Your matches
+            <span class="badge badge-primary">{{ accepted|length }}</span>
+        </h2>
+        <ul class="list rounded-box bg-base-100 shadow-md">
+            {% for entry in accepted %}
+            <li class="list-row items-center">
+                <div class="avatar avatar-placeholder">
+                    <div class="w-10 rounded-full bg-neutral text-neutral-content">
+                        <span>{{ entry.other.user.username|first|upper }}</span>
+                    </div>
+                </div>
+                <div class="list-col-grow">
+                    <a href="{% url 'profile-detail' entry.other.user_id %}" class="link link-hover font-semibold">{{ entry.other.user.username }}</a>
+                </div>
+                <a href="{% url 'chat-room' entry.match.id %}" class="btn btn-primary btn-sm" aria-label="Open chat with {{ entry.other.user.username }}">Open chat</a>
+            </li>
+            {% empty %}
+            <li class="list-row text-base-content/60">No matches yet. Head to your feed to find someone.</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section>
+        <h2 class="mb-3 flex items-center gap-2 text-xl font-semibold">
+            Waiting for a reply
+            <span class="badge badge-primary">{{ outgoing|length }}</span>
+        </h2>
+        <ul class="list rounded-box bg-base-100 shadow-md">
+            {% for entry in outgoing %}
+            <li class="list-row items-center">
+                <div class="avatar avatar-placeholder">
+                    <div class="w-10 rounded-full bg-neutral text-neutral-content">
+                        <span>{{ entry.other.user.username|first|upper }}</span>
+                    </div>
+                </div>
+                <div class="list-col-grow">
+                    <a href="{% url 'profile-detail' entry.other.user_id %}" class="link link-hover font-semibold">{{ entry.other.user.username }}</a>
+                </div>
+                <span class="badge badge-outline">Pending</span>
+            </li>
+            {% empty %}
+            <li class="list-row text-base-content/60">Nothing pending.</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+</div>
 {% endblock %}

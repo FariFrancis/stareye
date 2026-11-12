@@ -1,10 +1,24 @@
 {% extends "base.html" %}
+
 {% block title %}Change email{% endblock %}
+
 {% block content %}
-<h1>Change email</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Update email</button>
-</form>
+<div class="flex justify-center py-6">
+    <div class="card w-full max-w-md bg-base-100 shadow-xl">
+        <div class="card-body">
+
+            <h1 class="card-title text-2xl">Change email</h1>
+
+            <form method="post" class="django-form mt-2">
+                {% csrf_token %}
+                {{ form.as_div }}
+                <div class="flex gap-3">
+                    <button type="submit" class="btn btn-primary">Update email</button>
+                    <a href="{% url 'my-profile' %}" class="btn btn-ghost">Cancel</a>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
 {% endblock %}

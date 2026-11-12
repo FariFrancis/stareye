@@ -1,32 +1,93 @@
 {% extends "base.html" %}
+
 {% block title %}Feed{% endblock %}
+
 {% block content %}
-<h1>Your feed</h1>
+
+<h1 class="text-3xl font-bold mb-6">
+    Your Feed
+</h1>
 
 {% if not profile_complete %}
-    <p>Add your date of birth and gender in <a href="{% url 'edit-profile' %}">your profile</a> to see recommendations.</p>
+
+    <p>
+        Add your date of birth and gender in
+        <a href="{% url 'edit-profile' %}" class="link link-info">
+            your profile
+        </a>
+        to see recommendations.
+    </p>
+
 {% elif not ranked %}
-    <p>No new people to show right now. Check your <a href="{% url 'matches' %}">matches</a> or come back later.</p>
+
+    <p>
+        No new people to show right now.
+        Check your
+        <a href="{% url 'matches' %}" class="link link-info">
+            matches
+        </a>
+        or come back later.
+    </p>
+
 {% else %}
-<ul class="cards">
+
+<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+
     {% for item in ranked %}
     {% with p=item.profile %}
-    <li>
-        {% with img=p.images.all|first %}{% if img and img.image %}<img class="thumb" src="{{ img.image.url }}" alt="">{% endif %}{% endwith %}
-        <strong>{{ p.user.username }}</strong>{% if p.age %}, {{ p.age }}{% endif %}
-        <span class="muted">&middot; {{ item.score }}% compatible</span><br>
-        {% if p.user_location %}{{ p.user_location }}<br>{% endif %}
-        {% if p.occupation %}{{ p.occupation }}<br>{% endif %}
-        {% if p.user_bio %}<span class="muted">{{ p.user_bio|truncatechars:140 }}</span><br>{% endif %}
 
-        <a href="{% url 'profile-detail' p.user_id %}">View profile</a>
-        <form action="{% url 'create-match' p.user_id %}" method="post" style="margin-top: .5rem;">
-            {% csrf_token %}
-            <button type="submit">Match</button>
-        </form>
-    </li>
+    <div class="card bg-base-100 shadow-xl">
+
+        {% with img=p.images.all|first %}
+            {% if img and img.image %}
+                <figure>
+                    <img
+                        src="{{ img.image.url }}"
+                        alt="{{ p.user.username }}"
+                        class="h-72 w-full object-cover">
+                </figure>
+            {% endif %}
+        {% endwith %}
+
+        <div class="card-body">
+
+            <h2 class="card-title">
+                {{ p.user.username }}
+
+                {% if p.age %}
+                <span class="text-gray-500">
+                    {{ p.age }}
+                </span>
+                {% endif %}
+            </h2>
+
+            {% if p.user_bio %}
+            <p>
+                {{ p.user_bio|truncatechars:80 }}
+            </p>
+            {% endif %}
+
+            <div class="card-actions justify-end">
+
+                <a
+                    href="{% url 'profile-detail' p.user_id %}"
+                    class="btn btn-info">
+
+                    View Profile
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
     {% endwith %}
     {% endfor %}
-</ul>
+
+</div>
+
 {% endif %}
+
 {% endblock %}

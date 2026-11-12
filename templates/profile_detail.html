@@ -1,30 +1,127 @@
 {% extends "base.html" %}
-{% block title %}{{ profile.user.username }}'s profile{% endblock %}
+
+{% block title %}{{ profile.user.username }}{% endblock %}
+
 {% block content %}
-<h1>{{ profile.user.username }}</h1>
+<div class="mx-auto max-w-4xl">
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
 
-{% for img in profile.images.all %}{% if img.image %}<img class="thumb" src="{{ img.image.url }}" alt="">{% endif %}{% endfor %}
+            <div class="flex flex-col items-center">
 
-{% if profile.age %}<p><strong>Age:</strong> {{ profile.age }}</p>{% endif %}
-{% if profile.user_location %}<p><strong>Location:</strong> {{ profile.user_location }}</p>{% endif %}
-{% if profile.gender %}<p><strong>Gender:</strong> {{ profile.get_gender_display }}</p>{% endif %}
-{% if profile.preference %}<p><strong>Looking for:</strong> {{ profile.get_preference_display }}</p>{% endif %}
-{% if profile.hair_color %}<p><strong>Hair:</strong> {{ profile.get_hair_color_display }}</p>{% endif %}
-{% if profile.ethnicity %}<p><strong>Ethnicity:</strong> {{ profile.get_ethnicity_display }}</p>{% endif %}
-{% if profile.relationship_history %}<p><strong>Relationship history:</strong> {{ profile.get_relationship_history_display }}</p>{% endif %}
-{% if profile.education %}<p><strong>Education:</strong> {{ profile.get_education_display }}</p>{% endif %}
-{% if profile.religion %}<p><strong>Religion:</strong> {{ profile.get_religion_display }}</p>{% endif %}
-{% if profile.occupation %}<p><strong>Occupation:</strong> {{ profile.occupation }}</p>{% endif %}
-{% if profile.height_cm %}<p><strong>Height:</strong> {{ profile.height_cm }} cm</p>{% endif %}
-{% if profile.hobbies %}<p><strong>Hobbies:</strong> {{ profile.hobbies|join:", " }}</p>{% endif %}
-{% if profile.user_bio %}<p><strong>About:</strong><br>{{ profile.user_bio|linebreaksbr }}</p>{% endif %}
+                {% with photos=profile.images.all %}
+                    {% if photos %}
+                        {% with main=photos.0 %}
+                        {% if main.image %}
+                        <img
+                            src="{{ main.image.url }}"
+                            alt="Photo of {{ profile.user.username }}"
+                            class="aspect-[4/5] w-full max-w-sm rounded-2xl object-cover shadow-lg">
+                        {% endif %}
+                        {% endwith %}
 
-{% if is_me %}
-    <p><a href="{% url 'edit-profile' %}">Edit profile</a> &middot; <a href="{% url 'change-email' %}">Change email</a></p>
-{% elif i_blocked %}
-    <form method="post" action="{% url 'unblock-user' profile.user_id %}">{% csrf_token %}<button type="submit">Unblock {{ profile.user.username }}</button></form>
-{% else %}
-    <form method="post" action="{% url 'create-match' profile.user_id %}" style="display:inline">{% csrf_token %}<button type="submit">Match</button></form>
-    <form method="post" action="{% url 'block-user' profile.user_id %}" style="display:inline" onsubmit="return confirm('Block this user?');">{% csrf_token %}<button type="submit">Block</button></form>
-{% endif %}
+                        {% if photos|length > 1 %}
+                        <div class="mt-3 grid w-full max-w-sm grid-cols-4 gap-2">
+                            {% for img in photos %}
+                                {% if not forloop.first and img.image %}
+                                <img
+                                    src="{{ img.image.url }}"
+                                    alt="Photo {{ forloop.counter }} of {{ profile.user.username }}"
+                                    class="aspect-square w-full rounded-lg object-cover"
+                                    loading="lazy">
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="flex aspect-[4/5] w-full max-w-sm items-center justify-center rounded-2xl bg-base-300 text-base-content/50">
+                            No photo yet
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <h1 class="mt-4 text-4xl font-bold">
+                    {{ profile.user.username }}
+                    {% if profile.age %}<span class="font-normal text-base-content/60">{{ profile.age }}</span>{% endif %}
+                </h1>
+
+            </div>
+
+            <div class="divider"></div>
+
+            <dl class="grid gap-4 sm:grid-cols-2">
+                {% if profile.user_location %}
+                <div><dt class="text-sm text-base-content/60">Location</dt><dd class="font-medium">{{ profile.user_location }}</dd></div>
+                {% endif %}
+                {% if profile.occupation %}
+                <div><dt class="text-sm text-base-content/60">Occupation</dt><dd class="font-medium">{{ profile.occupation }}</dd></div>
+                {% endif %}
+                {% if profile.gender %}
+                <div><dt class="text-sm text-base-content/60">Gender</dt><dd class="font-medium">{{ profile.get_gender_display }}</dd></div>
+                {% endif %}
+                {% if profile.preference %}
+                <div><dt class="text-sm text-base-content/60">Looking for</dt><dd class="font-medium">{{ profile.get_preference_display }}</dd></div>
+                {% endif %}
+                {% if profile.education %}
+                <div><dt class="text-sm text-base-content/60">Education</dt><dd class="font-medium">{{ profile.get_education_display }}</dd></div>
+                {% endif %}
+                {% if profile.religion %}
+                <div><dt class="text-sm text-base-content/60">Religion</dt><dd class="font-medium">{{ profile.get_religion_display }}</dd></div>
+                {% endif %}
+                {% if profile.height_cm %}
+                <div><dt class="text-sm text-base-content/60">Height</dt><dd class="font-medium">{{ profile.height_cm }} cm</dd></div>
+                {% endif %}
+                {% if profile.relationship_history %}
+                <div><dt class="text-sm text-base-content/60">Relationship history</dt><dd class="font-medium">{{ profile.get_relationship_history_display }}</dd></div>
+                {% endif %}
+            </dl>
+
+            {% if profile.hobbies %}
+            <div class="divider">Hobbies</div>
+            <div class="flex flex-wrap gap-2">
+                {% for hobby in profile.hobbies %}
+                <span class="badge badge-primary badge-outline badge-lg">{{ hobby }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if profile.user_bio %}
+            <div class="divider">About me</div>
+            <div class="rounded-xl bg-base-200 p-4">{{ profile.user_bio|linebreaksbr }}</div>
+            {% endif %}
+
+            <div class="divider"></div>
+
+            {% if is_me %}
+
+                <div class="flex flex-wrap gap-3">
+                    <a href="{% url 'edit-profile' %}" class="btn btn-primary">Edit profile</a>
+                    <a href="{% url 'change-email' %}" class="btn btn-outline">Change email</a>
+                </div>
+
+            {% elif i_blocked %}
+
+                <form method="post" action="{% url 'unblock-user' profile.user_id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning">Unblock {{ profile.user.username }}</button>
+                </form>
+
+            {% else %}
+
+                <div class="flex flex-wrap gap-3">
+                    <form method="post" action="{% url 'create-match' profile.user_id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary">Match</button>
+                    </form>
+                    <form method="post" action="{% url 'block-user' profile.user_id %}" onsubmit="return confirm('Block {{ profile.user.username|escapejs }}? They will no longer be able to see or message you.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline btn-error">Block</button>
+                    </form>
+                </div>
+
+            {% endif %}
+
+        </div>
+    </div>
+</div>
 {% endblock %}
