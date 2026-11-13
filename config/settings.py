@@ -1,10 +1,13 @@
 import os
+import sys
 from pathlib import Path
+from dotenv import load_dotenv
+import dj_database_url
 
 from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+load_dotenv(BASE_DIR / ".env")
 
 def env_bool(name, default=False):
     value = os.environ.get(name)
@@ -53,7 +56,14 @@ INSTALLED_APPS = [
     "chat",
     "accounts",
     "recommend",
+    "tailwind",
+    "theme",
 ]
+
+TAILWIND_APP_NAME = "theme"
+
+NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
+
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -87,14 +97,59 @@ ASGI_APPLICATION = "config.asgi.application"
 
 
 # --- Database --------------------------------------------------------------
+_db_url = os.environ.get("DATABASE_URL")
+_sqlite = {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+if "test" in sys.argv:
+    DATABASES = {"default": _sqlite}   # tests never touch Supabase
+elif _db_url:
+    DATABASES = {
+        "default": dj_database_url.parse(_db_url, conn_max_age=0, ssl_require=True)
     }
-}
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
+elif DEBUG:
+    DATABASES = {"default": _sqlite}
+else:
+    raise ImproperlyConfigured("Set DATABASE_URL when DEBUG is off.")
 
+
+SUPABASE_PROJECT_REF = os.environ.get("SUPABASE_PROJECT_REF", "")
+SUPABASE_S3_ACCESS_KEY_ID = os.environ.get("SUPABASE_S3_ACCESS_KEY_ID", "")
+SUPABASE_S3_SECRET_ACCESS_KEY = os.environ.get("SUPABASE_S3_SECRET_ACCESS_KEY", "")
+SUPABASE_S3_REGION = os.environ.get("SUPABASE_S3_REGION", "")
+SUPABASE_BUCKET = os.environ.get("SUPABASE_BUCKET", "profile-photos")
+
+os.environ.setdefault("AWS_REQUEST_CHECKSUM_CALCULATION", "when_required")
+os.environ.setdefault("AWS_RESPONSE_CHECKSUM_VALIDATION", "when_required")
+ 
+if SUPABASE_PROJECT_REF and SUPABASE_S3_ACCESS_KEY_ID and SUPABASE_S3_SECRET_ACCESS_KEY:
+    _public_host = (
+        f"{SUPABASE_PROJECT_REF}.supabase.co/storage/v1/object/public/{SUPABASE_BUCKET}"
+    )
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "access_key": SUPABASE_S3_ACCESS_KEY_ID,
+                "secret_key": SUPABASE_S3_SECRET_ACCESS_KEY,
+                "bucket_name": SUPABASE_BUCKET,
+                "endpoint_url": f"https://{SUPABASE_PROJECT_REF}.storage.supabase.co/storage/v1/s3",
+                "region_name": SUPABASE_S3_REGION,
+                "addressing_style": "path",
+                "signature_version": "s3v4",
+                "custom_domain": _public_host,  
+                "querystring_auth": False,       
+                "file_overwrite": False,
+            },
+        },
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+    MEDIA_URL = f"https://{_public_host}/"
+elif not DEBUG:
+    raise ImproperlyConfigured(
+        "Set SUPABASE_PROJECT_REF, SUPABASE_S3_ACCESS_KEY_ID, "
+        "SUPABASE_S3_SECRET_ACCESS_KEY and SUPABASE_S3_REGION when DEBUG is off."
+    )
 
 # Channels (WebSockets) 
 

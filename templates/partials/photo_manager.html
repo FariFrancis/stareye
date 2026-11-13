@@ -1,0 +1,54 @@
+{# Include this after the profile form in profile_edit.html: {% include "partials/photo_manager.html" %} #}
+{% with photos=profile.images.all %}
+<section id="photos" class="mt-8 space-y-4">
+    <div class="flex items-baseline justify-between">
+        <h2 class="text-xl font-semibold">Photos</h2>
+        <span class="text-sm text-base-content/60">{{ photos|length }} / {{ max_photos }}</span>
+    </div>
+
+    {% if photos %}
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {% for photo in photos %}
+        <div class="card bg-base-200 overflow-hidden">
+            <figure class="relative aspect-[3/4]">
+                <img src="{{ photo.image.url }}" alt="Your photo {{ forloop.counter }}" loading="lazy"
+                     class="h-full w-full object-cover">
+                {% if forloop.first %}
+                <span class="badge badge-primary absolute left-2 top-2 shadow">Main photo</span>
+                {% endif %}
+            </figure>
+            <div class="flex gap-2 p-2">
+                {% if not forloop.first %}
+                <form method="post" action="{% url 'set-main-photo' photo.id %}" class="flex-1">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-soft w-full">Make main</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{% url 'delete-photo' photo.id %}" class="flex-1"
+                      onsubmit="return confirm('Delete this photo?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-error btn-soft w-full">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div role="alert" class="alert alert-soft">
+        <span>You haven't added any photos yet. Profiles with photos get far more attention.</span>
+    </div>
+    {% endif %}
+
+    {% if photos|length < max_photos %}
+    <form method="post" action="{% url 'upload-photos' %}" enctype="multipart/form-data" class="space-y-2">
+        {% csrf_token %}
+        <input type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple required
+               class="file-input w-full">
+        <p class="text-xs text-base-content/60">
+            JPG, PNG or WebP, up to 8 MB each. Location data is removed from your photos.
+        </p>
+        <button type="submit" class="btn btn-primary">Upload</button>
+    </form>
+    {% endif %}
+</section>
+{% endwith %}

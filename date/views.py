@@ -1,13 +1,19 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.core.exceptions import ValidationError
+from django.db.models import Max, Min, Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from . import services
 from .forms import ProfileForm
-from .models import Match, UserProfile
+from .image_utils import MAX_PHOTOS, process_upload
+from .models import Match, ProfileImage, UserProfile
+
+logger = logging.getLogger(__name__)
 
 
 def _wants_json(request):
@@ -176,4 +182,73 @@ def edit_profile(request):
         form.save()
         messages.success(request, "Profile saved.")
         return redirect("profile-detail", profile_id=request.user.id)
-    return render(request, "profile_edit.html", {"form": form, "profile": profile})
+    return render(request, "profile_edit.html", {
+        "form": form,
+        "profile": profile,
+        "max_photos": MAX_PHOTOS,
+    })
+
+
+@login_required
+@require_POST
+def upload_photos(request):
+    profile = services.get_profile(request.user)
+    files = request.FILES.getlist("photos")
+    if not files:
+        messages.error(request, "Choose at least one photo to upload.")
+        return redirect("edit-profile")
+
+    room = MAX_PHOTOS - profile.images.count()
+    if room <= 0:
+        messages.error(
+            request, f"You can have up to {MAX_PHOTOS} photos. Delete one to add another."
+        )
+        return redirect("edit-profile")
+
+    next_position = (profile.images.aggregate(top=Max("position"))["top"] or 0) + 1
+    saved = 0
+    problems = []
+    for upload in files[:room]:
+        try:
+            processed = process_upload(upload)
+        except ValidationError as exc:
+            problems.append(f"{upload.name}: {exc.messages[0]}")
+            continue
+        try:
+            ProfileImage.objects.create(user=profile, image=processed, position=next_position)
+        except Exception:
+            logger.exception("Photo upload to storage failed for profile %s", profile.pk)
+            problems.append(f"{upload.name}: the upload failed, please try again.")
+            continue
+        next_position += 1
+        saved += 1
+
+    if len(files) > room:
+        problems.append(f"Only {room} more photo(s) fit; the rest were skipped.")
+    if saved:
+        messages.success(request, f"Added {saved} photo{'s' if saved != 1 else ''}.")
+    for problem in problems:
+        messages.error(request, problem)
+    return redirect("edit-profile")
+
+
+@login_required
+@require_POST
+def delete_photo(request, photo_id):
+    profile = services.get_profile(request.user)
+    photo = get_object_or_404(ProfileImage, pk=photo_id, user=profile)
+    photo.delete()  # the stored file is removed by a post_delete signal
+    messages.success(request, "Photo deleted.")
+    return redirect("edit-profile")
+
+
+@login_required
+@require_POST
+def set_main_photo(request, photo_id):
+    profile = services.get_profile(request.user)
+    photo = get_object_or_404(ProfileImage, pk=photo_id, user=profile)
+    lowest = profile.images.aggregate(low=Min("position"))["low"] or 0
+    photo.position = lowest - 1
+    photo.save(update_fields=["position"])
+    messages.success(request, "Main photo updated.")
+    return redirect("edit-profile")

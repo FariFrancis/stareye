@@ -19,7 +19,7 @@ gender_options = [
     ('o', 'Other'),
 ]
 
-# Keys must match recommend.rec.GENDER_PREF.
+
 gender_preference_options = [
     ('everyone', 'Everyone'),
     ('male_only', 'Men only'),
@@ -74,7 +74,6 @@ relationship_history_options = [
     ('separated', 'Separated'),
 ]
 
-# Keys must match education.csv (used for the education embeddings).
 education_options = [
     ('high_school', 'High School'),
     ('college', 'College'),
@@ -147,13 +146,17 @@ def image_filename(instance, filename):
 class ProfileImage(models.Model):
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="images")
     image = models.ImageField(upload_to=image_filename, blank=True)
+    position = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "id"]
 
     def __str__(self):
         return f"Image for {self.user.user.username}"
 
 
 class Match(models.Model):
-    """A match request. `matcher` asks, `matchee` accepts or rejects."""
+    # A match request. `matcher` asks, `matchee` accepts or rejects
 
     PENDING = "pending"
     ACCEPTED = "accepted"

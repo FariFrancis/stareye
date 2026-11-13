@@ -14,6 +14,7 @@ from date.models import UserProfile
 class SignupTests(TestCase):
     def post_signup(self, **overrides):
         data = {
+            "first_name": "Luke",
             "username": "newuser",
             "email": "new@example.com",
             "password1": "S3cure-pass-phrase!",
@@ -28,7 +29,8 @@ class SignupTests(TestCase):
         self.assertRedirects(response, reverse("edit-profile"))
         profile = UserProfile.objects.get(user__username="newuser")
         self.assertEqual(profile.user_birth_date, datetime.date(1990, 1, 1))
-
+        self.assertEqual(profile.user.first_name, "Luke")
+        
     def test_minors_are_rejected(self):
         response = self.post_signup(birth_date=datetime.date.today().isoformat())
         self.assertEqual(response.status_code, 200)
