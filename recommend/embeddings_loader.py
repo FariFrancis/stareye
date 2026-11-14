@@ -1,9 +1,11 @@
 import csv
+import os
 from functools import lru_cache
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_NAME = "all-MiniLM-L6-v2"
+MODEL_CACHE_DIR = Path(os.environ.get("EMBEDDING_MODEL_DIR") or BASE_DIR / ".model_cache")
 
 CATEGORY_FILES = {
     "religion": BASE_DIR / "religion.csv",
@@ -15,8 +17,7 @@ CATEGORY_FILES = {
 def get_model():
     from sentence_transformers import SentenceTransformer
 
-    return SentenceTransformer(MODEL_NAME)
-
+    return SentenceTransformer(MODEL_NAME, cache_folder=str(MODEL_CACHE_DIR))
 
 def _read_labels(path, column):
     with open(path, newline="", encoding="utf-8") as handle:

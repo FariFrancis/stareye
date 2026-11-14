@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Chat with {{ other.user.username }}
+Chat with {{ other.user.first_name|default:other.user.username }}
 {% endblock %}
 
 {% block content %}
@@ -24,7 +24,7 @@ Chat with {{ other.user.username }}
                             href="{% url 'profile-detail' other.user_id %}"
                             class="link link-info">
 
-                            {{ other.user.username }}
+                            {{ other.user.first_name|default:other.user.username }}
 
                         </a>
 
@@ -62,7 +62,7 @@ Chat with {{ other.user.username }}
                     autocomplete="off"
                     required
                     placeholder="Type a message..."
-                    class="input input-bordered input-info flex-1">
+                    class="input input-info flex-1">
 
                 <button
                     type="submit"

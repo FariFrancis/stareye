@@ -15,22 +15,18 @@
         <ul class="list rounded-box bg-base-100 shadow-md">
             {% for entry in incoming %}
             <li class="list-row items-center">
-                <div class="avatar avatar-placeholder">
-                    <div class="w-10 rounded-full bg-neutral text-neutral-content">
-                        <span>{{ entry.other.user.username|first|upper }}</span>
-                    </div>
-                </div>
+                {% include "partials/person_avatar.html" with person=entry.other %}
                 <div class="list-col-grow">
-                    <a href="{% url 'profile-detail' entry.other.user_id %}" class="link link-hover font-semibold">{{ entry.other.user.username }}</a>
+                    <a href="{% url 'profile-detail' entry.other.user_id %}" class="link link-hover font-semibold">{{ entry.other.user.first_name|default:entry.other.user.username }}{% if entry.other.age %}, {{ entry.other.age }}{% endif %}</a>
                     <div class="text-sm text-base-content/70">wants to match with you</div>
                 </div>
                 <form method="post" action="{% url 'accept-match' entry.match.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-primary btn-sm" aria-label="Accept request from {{ entry.other.user.username }}">Accept</button>
+                    <button type="submit" class="btn btn-primary btn-sm" aria-label="Accept request from {{ entry.other.user.first_name|default:entry.other.user.username }}{% if entry.other.age %}, {{ entry.other.age }}{% endif %}">Accept</button>
                 </form>
                 <form method="post" action="{% url 'reject-match' entry.match.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-ghost btn-sm" aria-label="Reject request from {{ entry.other.user.username }}">Reject</button>
+                    <button type="submit" class="btn btn-ghost btn-sm" aria-label="Reject request from {{ entry.other.user.first_name|default:entry.other.user.username }}{% if entry.other.age %}, {{ entry.other.age }}{% endif %}">Reject</button>
                 </form>
             </li>
             {% empty %}
@@ -47,15 +43,11 @@
         <ul class="list rounded-box bg-base-100 shadow-md">
             {% for entry in accepted %}
             <li class="list-row items-center">
-                <div class="avatar avatar-placeholder">
-                    <div class="w-10 rounded-full bg-neutral text-neutral-content">
-                        <span>{{ entry.other.user.username|first|upper }}</span>
-                    </div>
-                </div>
+                {% include "partials/person_avatar.html" with person=entry.other %}
                 <div class="list-col-grow">
-                    <a href="{% url 'profile-detail' entry.other.user_id %}" class="link link-hover font-semibold">{{ entry.other.user.username }}</a>
+                    <a href="{% url 'profile-detail' entry.other.user_id %}" class="link link-hover font-semibold">{{ entry.other.user.first_name|default:entry.other.user.username }}{% if entry.other.age %}, {{ entry.other.age }}{% endif %}</a>
                 </div>
-                <a href="{% url 'chat-room' entry.match.id %}" class="btn btn-primary btn-sm" aria-label="Open chat with {{ entry.other.user.username }}">Open chat</a>
+                <a href="{% url 'chat-room' entry.match.id %}" class="btn btn-primary btn-sm" aria-label="Open chat with {{ entry.other.user.first_name|default:entry.other.user.username }}{% if entry.other.age %}, {{ entry.other.age }}{% endif %}">Open chat</a>
             </li>
             {% empty %}
             <li class="list-row text-base-content/60">No matches yet. Head to your feed to find someone.</li>
@@ -71,13 +63,9 @@
         <ul class="list rounded-box bg-base-100 shadow-md">
             {% for entry in outgoing %}
             <li class="list-row items-center">
-                <div class="avatar avatar-placeholder">
-                    <div class="w-10 rounded-full bg-neutral text-neutral-content">
-                        <span>{{ entry.other.user.username|first|upper }}</span>
-                    </div>
-                </div>
+                {% include "partials/person_avatar.html" with person=entry.other %}
                 <div class="list-col-grow">
-                    <a href="{% url 'profile-detail' entry.other.user_id %}" class="link link-hover font-semibold">{{ entry.other.user.username }}</a>
+                    <a href="{% url 'profile-detail' entry.other.user_id %}" class="link link-hover font-semibold">{{ entry.other.user.first_name|default:entry.other.user.username }}{% if entry.other.age %}, {{ entry.other.age }}{% endif %}</a>
                 </div>
                 <span class="badge badge-outline">Pending</span>
             </li>

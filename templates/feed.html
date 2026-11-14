@@ -1,88 +1,102 @@
 {% extends "base.html" %}
 
-{% block title %}Feed{% endblock %}
+{% block title %}Discover{% endblock %}
 
 {% block content %}
 
-<h1 class="text-3xl font-bold mb-6">
-    Your Feed
-</h1>
+<div class="mb-6 flex items-end justify-between">
+    <h1 class="text-3xl font-bold">Discover</h1>
+    {% if ranked %}<span class="badge badge-soft badge-primary">{{ ranked|length }} people</span>{% endif %}
+</div>
 
 {% if not profile_complete %}
 
-    <p>
-        Add your date of birth and gender in
-        <a href="{% url 'edit-profile' %}" class="link link-info">
-            your profile
-        </a>
-        to see recommendations.
-    </p>
+    <div role="alert" class="alert alert-info alert-soft">
+        <span>
+            Add your date of birth and gender in
+            <a href="{% url 'edit-profile' %}" class="link font-semibold">your profile</a>
+            to see recommendations.
+        </span>
+    </div>
 
 {% elif not ranked %}
 
-    <p>
-        No new people to show right now.
-        Check your
-        <a href="{% url 'matches' %}" class="link link-info">
-            matches
-        </a>
-        or come back later.
-    </p>
+    <div role="alert" class="alert alert-soft">
+        <span>
+            No new people to show right now. Check your
+            <a href="{% url 'matches' %}" class="link font-semibold">matches</a>
+            or come back later.
+        </span>
+    </div>
 
 {% else %}
 
-<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
 
     {% for item in ranked %}
     {% with p=item.profile %}
+    {% with name=p.user.first_name|default:p.user.username img=p.images.all|first %}
 
-    <div class="card bg-base-100 shadow-xl">
+    <article class="card bg-base-100 overflow-hidden shadow-xl">
 
-        {% with img=p.images.all|first %}
+        <a href="{% url 'profile-detail' p.user_id %}"
+           class="relative block aspect-[3/4] bg-base-300"
+           aria-label="View {{ name }}'s profile">
+
             {% if img and img.image %}
-                <figure>
-                    <img
-                        src="{{ img.image.url }}"
-                        alt="{{ p.user.username }}"
-                        class="h-72 w-full object-cover">
-                </figure>
+                <img src="{{ img.image.url }}"
+                     alt="Photo of {{ name }}"
+                     loading="lazy"
+                     class="h-full w-full object-cover">
+            {% else %}
+                <div class="flex h-full w-full items-center justify-center">
+                    <div class="avatar avatar-placeholder">
+                        <div class="w-28 rounded-full bg-neutral text-neutral-content">
+                            <span class="text-5xl">{{ name|first|upper }}</span>
+                        </div>
+                    </div>
+                </div>
             {% endif %}
-        {% endwith %}
 
-        <div class="card-body">
+            {% if item.score %}<span class="badge badge-primary absolute right-3 top-3 shadow">{{ item.score }}% match</span>{% endif %}
 
-            <h2 class="card-title">
-                {{ p.user.username }}
-
-                {% if p.age %}
-                <span class="text-gray-500">
-                    {{ p.age }}
-                </span>
+            <div class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 via-black/40 to-transparent p-4 pt-20 text-white">
+                <h2 class="text-2xl font-bold leading-tight">
+                    {{ name }}{% if p.age %}<span class="font-normal">, {{ p.age }}</span>{% endif %}
+                </h2>
+                {% if p.occupation or p.user_location %}
+                <p class="truncate text-sm text-white/80">
+                    {% if p.occupation %}{{ p.occupation }}{% endif %}{% if p.occupation and p.user_location %} · {% endif %}{% if p.user_location %}{{ p.user_location }}{% endif %}
+                </p>
                 {% endif %}
-            </h2>
+            </div>
+        </a>
 
+        <div class="card-body gap-3 p-4">
             {% if p.user_bio %}
-            <p>
-                {{ p.user_bio|truncatechars:80 }}
-            </p>
+            <p class="line-clamp-2 text-base-content/80">{{ p.user_bio }}</p>
             {% endif %}
 
-            <div class="card-actions justify-end">
-
-                <a
-                    href="{% url 'profile-detail' p.user_id %}"
-                    class="btn btn-info">
-
-                    View Profile
-
-                </a>
-
+            {% if p.hobbies %}
+            <div class="flex flex-wrap gap-1">
+                {% for hobby in p.hobbies|slice:":3" %}
+                <span class="badge badge-soft badge-primary">{{ hobby }}</span>
+                {% endfor %}
             </div>
+            {% endif %}
 
+            <div class="card-actions mt-1">
+                <a href="{% url 'profile-detail' p.user_id %}" class="btn btn-ghost flex-1">View</a>
+                <form method="post" action="{% url 'create-match' p.user_id %}" class="flex-1">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary w-full">&hearts; Match</button>
+                </form>
+            </div>
         </div>
 
-    </div>
+    </article>
 
+    {% endwith %}
     {% endwith %}
     {% endfor %}
 

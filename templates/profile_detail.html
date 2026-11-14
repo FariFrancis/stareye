@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ profile.user.username }}{% endblock %}
+{% block title %}{{ profile.user.first_name|default:profile.user.username }}{% endblock %}
 
 {% block content %}
 <div class="mx-auto max-w-4xl">
@@ -15,7 +15,7 @@
                         {% if main.image %}
                         <img
                             src="{{ main.image.url }}"
-                            alt="Photo of {{ profile.user.username }}"
+                            alt="Photo of {{ profile.user.first_name|default:profile.user.username }}"
                             class="aspect-[4/5] w-full max-w-sm rounded-2xl object-cover shadow-lg">
                         {% endif %}
                         {% endwith %}
@@ -26,7 +26,7 @@
                                 {% if not forloop.first and img.image %}
                                 <img
                                     src="{{ img.image.url }}"
-                                    alt="Photo {{ forloop.counter }} of {{ profile.user.username }}"
+                                    alt="Photo {{ forloop.counter }} of {{ profile.user.first_name|default:profile.user.username }}"
                                     class="aspect-square w-full rounded-lg object-cover"
                                     loading="lazy">
                                 {% endif %}
@@ -41,9 +41,9 @@
                 {% endwith %}
 
                 <h1 class="mt-4 text-4xl font-bold">
-                    {{ profile.user.username }}
-                    {% if profile.age %}<span class="font-normal text-base-content/60">{{ profile.age }}</span>{% endif %}
+                    {{ profile.user.first_name|default:profile.user.username }}{% if profile.age %}<span class="font-normal text-base-content/60">, {{ profile.age }}</span>{% endif %}
                 </h1>
+                {% if profile.user_location %}<p class="text-base-content/60">{{ profile.user_location }}</p>{% endif %}
 
             </div>
 
@@ -103,7 +103,7 @@
 
                 <form method="post" action="{% url 'unblock-user' profile.user_id %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-warning">Unblock {{ profile.user.username }}</button>
+                    <button type="submit" class="btn btn-warning">Unblock {{ profile.user.first_name|default:profile.user.username }}</button>
                 </form>
 
             {% else %}
@@ -113,7 +113,7 @@
                         {% csrf_token %}
                         <button type="submit" class="btn btn-primary">Match</button>
                     </form>
-                    <form method="post" action="{% url 'block-user' profile.user_id %}" onsubmit="return confirm('Block {{ profile.user.username|escapejs }}? They will no longer be able to see or message you.');">
+                    <form method="post" action="{% url 'block-user' profile.user_id %}" onsubmit="return confirm('Block {{ profile.user.first_name|default:profile.user.username|escapejs }}? They will no longer be able to see or message you.');">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline btn-error">Block</button>
                     </form>

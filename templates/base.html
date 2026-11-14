@@ -21,9 +21,8 @@
                         <div class="badge badge-success badge-sm"></div>
 
                         <span class="font-medium">
-                            Logged in as:
                             <span class="text-primary">
-                                {{ user.username }}
+                                {{ user.first_name|default:user.username }}
                             </span>
                         </span>
                     </div>

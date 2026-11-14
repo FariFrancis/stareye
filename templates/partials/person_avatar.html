@@ -1,0 +1,16 @@
+{# Usage: {% include "partials/person_avatar.html" with person=entry.other size="w-12" %} #}
+{% with img=person.images.all|first name=person.user.first_name|default:person.user.username %}
+{% if img and img.image %}
+<div class="avatar">
+    <div class="{{ size|default:'w-12' }} rounded-full">
+        <img src="{{ img.image.url }}" alt="Photo of {{ name }}" loading="lazy">
+    </div>
+</div>
+{% else %}
+<div class="avatar avatar-placeholder">
+    <div class="{{ size|default:'w-12' }} rounded-full bg-neutral text-neutral-content">
+        <span>{{ name|first|upper }}</span>
+    </div>
+</div>
+{% endif %}
+{% endwith %}

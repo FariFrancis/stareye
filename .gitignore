@@ -42,3 +42,5 @@ node_modules/
 .idea/
 .DS_Store
 Thumbs.db
+.model_cache/
+.model_cache/
